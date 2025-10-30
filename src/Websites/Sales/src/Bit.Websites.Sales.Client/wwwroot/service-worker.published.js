@@ -1,4 +1,4 @@
-// bit version: 9.8.0
+// bit version: 10.0.0-pre-05
 // https://github.com/bitfoundation/bitplatform/tree/develop/src/Bswup
 
 self.assetsInclude = [];
@@ -13,6 +13,9 @@ self.externalAssets = [
     },
     {
         "url": "Bit.Websites.Sales.Client.bundle.scp.css"
+    },
+    {
+        url: "_framework/bit.blazor.web.es2019.js"
     }
 ];
 
@@ -20,7 +23,8 @@ self.serverHandledUrls = [
     /\/api\//
 ];
 
-self.prerenderMode = 'always';
+self.mode = 'AlwaysPrerender';
+self.enableCacheControl = false;
 self.enableIntegrityCheck = false;
 
 self.importScripts('_content/Bit.Bswup/bit-bswup.sw.js');

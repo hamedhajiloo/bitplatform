@@ -10,10 +10,10 @@ using Boilerplate.Shared;
 using Boilerplate.Shared.Attributes;
 //#if (api == "Integrated")
 using Hangfire;
-using Boilerplate.Server.Api.Filters;
+using Boilerplate.Server.Api;
+using Boilerplate.Server.Api.RequestPipeline;
 using Boilerplate.Server.Api.Services;
 //#endif
-using Boilerplate.Server.Web.Endpoints;
 
 namespace Boilerplate.Server.Web;
 
@@ -29,28 +29,10 @@ public static partial class Program
 
         ServerWebSettings settings = new();
         configuration.Bind(settings);
-        var forwardedHeadersOptions = settings.ForwardedHeaders;
 
-        if (forwardedHeadersOptions is not null
-            && (app.Environment.IsDevelopment() || forwardedHeadersOptions.AllowedHosts.Any()))
-        {
-            // If the list is empty then all hosts are allowed. Failing to restrict this these values may allow an attacker to spoof links generated for reset password etc.
-            app.UseForwardedHeaders(forwardedHeadersOptions);
-        }
+        app.UseAppForwardedHeaders();
 
-        if (CultureInfoManager.InvariantGlobalization is false)
-        {
-            var supportedCultures = CultureInfoManager.SupportedCultures.Select(sc => sc.Culture).ToArray();
-            var options = new RequestLocalizationOptions
-            {
-                SupportedCultures = supportedCultures,
-                SupportedUICultures = supportedCultures,
-                ApplyCurrentCultureToResponseHeaders = true
-            };
-            options.SetDefaultCulture(CultureInfoManager.DefaultCulture.Name);
-            options.RequestCultureProviders.Insert(1, new RouteDataRequestCultureProvider() { Options = options });
-            app.UseRequestLocalization(options);
-        }
+        app.UseLocalization();
 
         //#if (api == "Integrated")
         app.UseExceptionHandler();
@@ -71,7 +53,7 @@ public static partial class Program
             app.UseXfo(options => options.SameOrigin());
         }
 
-        Configure_401_403_404_Pages(app);
+        app.Handle40XStatusCodes();
 
         if (env.IsDevelopment())
         {
@@ -117,6 +99,8 @@ public static partial class Program
 
         //#if (api == "Integrated")
         app.UseCors();
+
+        app.UseMiddleware<ForceUpdateMiddleware>();
         //#endif
 
         app.UseAuthentication();
@@ -125,6 +109,8 @@ public static partial class Program
         app.UseOutputCache();
 
         app.UseAntiforgery();
+
+        app.MapAppHealthChecks();
 
         //#if (api == "Integrated")
         app.UseSwagger();
@@ -170,7 +156,6 @@ public static partial class Program
         //#endif
 
         app.UseSiteMap();
-        app.UseHybridWebAppInterop();
 
         // Handle the rest of requests with blazor
         var blazorApp = app.MapRazorComponents<Components.App>()
@@ -193,17 +178,17 @@ public static partial class Program
     /// To mitigate the challenges posed by this situation, our only recourse is to repurpose the 401, 403, and 404 status codes for
     /// not-found and not-authorized responses, at the very least.
     /// </summary>
-    private static void Configure_401_403_404_Pages(WebApplication app)
+    private static void Handle40XStatusCodes(this WebApplication app)
     {
         app.Use(async (context, next) =>
         {
             if (context.Request.Path.HasValue)
             {
-                if (context.Request.Path.Value.Contains(Urls.NotFoundPage, StringComparison.InvariantCultureIgnoreCase))
+                if (context.Request.Path.Value.Contains(PageUrls.NotFound, StringComparison.InvariantCultureIgnoreCase))
                 {
                     context.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 }
-                if (context.Request.Path.Value.Contains(Urls.NotAuthorizedPage, StringComparison.InvariantCultureIgnoreCase))
+                if (context.Request.Path.Value.Contains(PageUrls.NotAuthorized, StringComparison.InvariantCultureIgnoreCase))
                 {
                     context.Response.StatusCode = context.Request.Query["isForbidden"].FirstOrDefault() is "true" ? (int)HttpStatusCode.Forbidden : (int)HttpStatusCode.Unauthorized;
                 }
@@ -226,16 +211,12 @@ public static partial class Program
                     var qs = AppQueryStringCollection.Parse(httpContext.Request.QueryString.Value ?? string.Empty);
                     qs.Remove("try_refreshing_token");
                     var returnUrl = UriHelper.BuildRelative(httpContext.Request.PathBase, httpContext.Request.Path, new QueryString(qs.ToString()));
-                    httpContext.Response.Redirect($"{Urls.NotAuthorizedPage}?return-url={returnUrl}&isForbidden={(is403 ? "true" : "false")}");
+                    httpContext.Response.Redirect($"{PageUrls.NotAuthorized}?return-url={returnUrl}&isForbidden={(is403 ? "true" : "false")}");
                 }
                 else if (httpContext.Response.StatusCode is 404 &&
                     httpContext.GetEndpoint() is null /* Please be aware that certain endpoints, particularly those associated with web API actions, may intentionally return a 404 error. */)
                 {
-                    httpContext.Response.Redirect($"{Urls.NotFoundPage}?url={httpContext.Request.GetEncodedPathAndQuery()}");
-                }
-                else
-                {
-                    await statusCodeContext.Next.Invoke(statusCodeContext.HttpContext);
+                    httpContext.Response.Redirect($"{PageUrls.NotFound}?url={httpContext.Request.GetEncodedPathAndQuery()}");
                 }
             }
         });

@@ -1,7 +1,6 @@
 ﻿using System.Net.Sockets;
 using System.Net;
 using Boilerplate.Server.Api;
-using Boilerplate.Server.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
@@ -34,11 +33,6 @@ public partial class AppTestServer : IAsyncDisposable
 
         builder.Configuration.AddClientConfigurations(clientEntryAssemblyName: "Boilerplate.Client.Web");
 
-        //#if (database  == 'Sqlite')
-        //Use in-memory Sqlite database for faster and more reliable testing
-        builder.Configuration["ConnectionStrings:SqliteConnectionString"] = "Data Source=BoilerplateDb;Mode=Memory;Cache=Shared;";
-        //#endif
-
         configureTestConfigurations?.Invoke(builder.Configuration);
 
         builder.AddTestProjectServices();
@@ -52,9 +46,9 @@ public partial class AppTestServer : IAsyncDisposable
         return this;
     }
 
-    public async Task Start()
+    public async Task Start(CancellationToken cancellationToken)
     {
-        await WebApp.StartAsync();
+        await WebApp.StartAsync(cancellationToken);
     }
 
     public async ValueTask DisposeAsync()

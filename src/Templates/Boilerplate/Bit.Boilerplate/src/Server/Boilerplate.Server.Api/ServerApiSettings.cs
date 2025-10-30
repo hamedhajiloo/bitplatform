@@ -3,12 +3,12 @@
 using AdsPush.Abstraction.Settings;
 //#endif
 using System.Text;
-using System.Text.RegularExpressions;
 using Boilerplate.Server.Api.Services;
+using Boilerplate.Server.Shared;
 
 namespace Boilerplate.Server.Api;
 
-public partial class ServerApiSettings : SharedSettings
+public partial class ServerApiSettings : ServerSharedSettings
 {
     [Required]
     public AppIdentityOptions Identity { get; set; } = default!;
@@ -16,7 +16,7 @@ public partial class ServerApiSettings : SharedSettings
     [Required]
     public EmailOptions Email { get; set; } = default!;
 
-    //#if (signalR == true || database == "PostgreSQL")
+    //#if (signalR == true || database == "PostgreSQL" || database == "SqlServer")
     public AIOptions? AI { get; set; }
     //#endif
 
@@ -41,18 +41,9 @@ public partial class ServerApiSettings : SharedSettings
     public AdsPushAPNSSettings? AdsPushAPNS { get; set; }
     //#endif
 
-    public ForwardedHeadersOptions? ForwardedHeaders { get; set; }
-
     //#if (cloudflare == true)
     public CloudflareOptions? Cloudflare { get; set; }
     //#endif
-
-    public ResponseCachingOptions? ResponseCaching { get; set; }
-
-    /// <summary>
-    /// Lists the permitted origins for CORS requests, return URLs following social sign-in and email confirmation, etc., along with allowed origins for Web Auth.
-    /// </summary>
-    public Uri[] TrustedOrigins { get; set; } = [];
 
     //#if (module == "Admin" || module == "Sales")
     [Required]
@@ -60,6 +51,8 @@ public partial class ServerApiSettings : SharedSettings
     //#endif
 
     public HangfireOptions? Hangfire { get; set; }
+
+    public SupportedAppVersionsOptions? SupportedAppVersions { get; set; }
 
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
@@ -83,13 +76,9 @@ public partial class ServerApiSettings : SharedSettings
             Validator.TryValidateObject(AdsPushVapid, new ValidationContext(AdsPushVapid), validationResults, true);
         }
         //#endif
-        if (ForwardedHeaders is not null)
+        if (SupportedAppVersions is not null)
         {
-            Validator.TryValidateObject(ForwardedHeaders, new ValidationContext(ForwardedHeaders), validationResults, true);
-        }
-        if (ResponseCaching is not null)
-        {
-            Validator.TryValidateObject(ResponseCaching, new ValidationContext(ResponseCaching), validationResults, true);
+            Validator.TryValidateObject(SupportedAppVersions, new ValidationContext(SupportedAppVersions), validationResults, true);
         }
 
         const int MinimumJwtIssuerSigningKeySecretByteLength = 64; // 512 bits = 64 bytes, minimum for HS512
@@ -101,9 +90,9 @@ public partial class ServerApiSettings : SharedSettings
                 $"({MinimumJwtIssuerSigningKeySecretByteLength * 8} bits) for HS512. Current key is {jwtIssuerSigningKeySecretByteLength} bytes.");
         }
 
-        if (AppEnvironment.IsDev() is false)
+        if (AppEnvironment.IsDevelopment() is false)
         {
-            if (Identity.JwtIssuerSigningKeySecret is "VeryLongJWTIssuerSiginingKeySecretThatIsMoreThan64BytesToEnsureCompatibilityWithHS512Algorithm")
+            if (Identity.JwtIssuerSigningKeySecret is "VeryLongJWTIssuerSigningKeySecretThatIsMoreThan64BytesToEnsureCompatibilityWithHS512Algorithm")
             {
                 throw new InvalidOperationException(@"Please replace JwtIssuerSigningKeySecret with a new one.");
             }
@@ -125,24 +114,6 @@ public partial class ServerApiSettings : SharedSettings
 
         return validationResults;
     }
-
-    internal bool IsAllowedOrigin(Uri origin)
-    {
-        return TrustedOrigins.Any(trustedOrigin => trustedOrigin == origin)
-            || TrustedOriginsRegex().IsMatch(origin.ToString());
-    }
-
-    //-:cnd:noEmit
-    /// <summary>
-    /// Blazor Hybrid's webview, localhost, devtunnels, github codespaces.
-    /// </summary>
-#if Development
-    [GeneratedRegex(@"^(http|https|app):\/\/(localhost|0\.0\.0\.0|0\.0\.0\.1|127\.0\.0\.1|.*?devtunnels\.ms|.*?github\.dev)(:\d+)?(\/.*)?$")]
-#else
-    [GeneratedRegex(@"^(http|https|app):\/\/(localhost|0\.0\.0\.0|0\.0\.0\.1|127\.0\.0\.1)(:\d+)?(\/.*)?$")]
-#endif
-    //+:cnd:noEmit
-    private partial Regex TrustedOriginsRegex();
 }
 
 public partial class AppIdentityOptions : IdentityOptions
@@ -184,11 +155,12 @@ public partial class AppIdentityOptions : IdentityOptions
     public int MaxPrivilegedSessionsCount { get; set; }
 }
 
-//#if (signalR == true || database == "PostgreSQL")
+//#if (signalR == true || database == "PostgreSQL" || database == "SqlServer")
 public partial class AIOptions
 {
     public OpenAIOptions? OpenAI { get; set; }
     public AzureOpenAIOptions? AzureOpenAI { get; set; }
+    public HuggingFaceOptions? HuggingFace { get; set; }
 }
 
 public class OpenAIOptions
@@ -213,25 +185,19 @@ public class AzureOpenAIOptions
     public string? EmbeddingApiKey { get; set; }
 }
 
+public class HuggingFaceOptions
+{
+    public string? EmbeddingApiKey { get; set; }
+
+    public string? EmbeddingEndpoint { get; set; }
+}
+
 //#endif
 
 public partial class EmailOptions
 {
     [Required]
-    public string Host { get; set; } = default!;
-    /// <summary>
-    /// If true, the web app tries to store emails as .eml file in the App_Data/sent-emails folder instead of sending them using smtp server (recommended for testing purposes only).
-    /// </summary>
-    public bool UseLocalFolderForEmails => Host is "LocalFolder";
-
-    [Range(1, 65535)]
-    public int Port { get; set; }
-    public string? UserName { get; set; }
-    public string? Password { get; set; }
-
-    [Required]
     public string DefaultFromEmail { get; set; } = default!;
-    public bool HasCredential => (string.IsNullOrEmpty(UserName) is false) && (string.IsNullOrEmpty(Password) is false);
 }
 
 //#if (cloudflare == true)
@@ -264,23 +230,36 @@ public partial class SmsOptions
                               string.IsNullOrEmpty(TwilioAutoToken) is false;
 }
 
-public class ResponseCachingOptions
-{
-    /// <summary>
-    /// Enables ASP.NET Core's response output caching
-    /// </summary>
-    public bool EnableOutputCaching { get; set; }
-
-    /// <summary>
-    /// Enables CDN's edge servers caching
-    /// </summary>
-    public bool EnableCdnEdgeCaching { get; set; }
-}
-
 public class HangfireOptions
 {
     /// <summary>
     /// Useful for testing or in production when managing multiple codebases with a single database.
     /// </summary>
     public bool UseIsolatedStorage { get; set; }
+}
+
+public class SupportedAppVersionsOptions
+{
+    public Version? MinimumSupportedAndroidAppVersion { get; set; }
+
+    public Version? MinimumSupportedIosAppVersion { get; set; }
+
+    public Version? MinimumSupportedMacOSAppVersion { get; set; }
+
+    public Version? MinimumSupportedWindowsAppVersion { get; set; }
+
+    public Version? MinimumSupportedWebAppVersion { get; set; }
+
+    public Version? GetMinimumSupportedAppVersion(AppPlatformType platformType)
+    {
+        return platformType switch
+        {
+            AppPlatformType.Android => MinimumSupportedAndroidAppVersion,
+            AppPlatformType.Ios => MinimumSupportedIosAppVersion,
+            AppPlatformType.MacOS => MinimumSupportedMacOSAppVersion,
+            AppPlatformType.Windows => MinimumSupportedWindowsAppVersion,
+            AppPlatformType.Web => MinimumSupportedWebAppVersion,
+            _ => throw new ArgumentOutOfRangeException(nameof(platformType), platformType, null)
+        };
+    }
 }

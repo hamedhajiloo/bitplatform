@@ -45,7 +45,7 @@ public partial class ForgotPasswordPage
             {
                 await identityController.SendResetPasswordToken(model, CurrentCancellationToken);
             }
-            catch (TooManyRequestsExceptions e)
+            catch (TooManyRequestsException e)
             {
                 SnackBarService.Error(e.Message);
                 // Let's go to the reset password page anyway.
@@ -64,7 +64,7 @@ public partial class ForgotPasswordPage
                 queryParams.Add("phoneNumber", model.PhoneNumber);
             }
 
-            var resetPasswordUrl = NavigationManager.GetUriWithQueryParameters(Urls.ResetPasswordPage, queryParams);
+            var resetPasswordUrl = NavigationManager.GetUriWithQueryParameters(PageUrls.ResetPassword, queryParams);
             NavigationManager.NavigateTo(resetPasswordUrl);
         }
         catch (BadRequestException e) when (e.Key == nameof(AppStrings.UserIsNotConfirmed))
@@ -95,7 +95,7 @@ public partial class ForgotPasswordPage
         {
             queryParams.Add("phoneNumber", model.PhoneNumber);
         }
-        var confirmUrl = NavigationManager.GetUriWithQueryParameters(Urls.ConfirmPage, queryParams);
+        var confirmUrl = NavigationManager.GetUriWithQueryParameters(PageUrls.Confirm, queryParams);
         NavigationManager.NavigateTo(confirmUrl, replace: true);
     }
 }

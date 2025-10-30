@@ -10,33 +10,34 @@
 <html bit-theme="dark">
 
 <head>
+    <ResourcePreloader />
     <base href="/" />
     <meta charset="utf-8" />
     <meta name="theme-color">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="description" content="bit BlazorUI components are native, easy-to-customize, and work seamlessly in all interactive Blazor modes (WASM, Server, Hybrid, pre-rendering), saving you time and making development enjoyable." />
 
-    <script>
+    <Script>
         // disable auto-zoom of iOS Safari when focusing an input
         (/iPad|iPhone|iPod/.test(navigator.userAgent)) &&
         (document.querySelector('meta[name="viewport"]').content = 'width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0')
-    </script>
+    </Script>
 
-    <Link rel="icon" href="favicon.ico" type="image/x-icon" />
     <HeadOutlet @rendermode=renderMode />
-    <Link rel="apple-touch-icon" sizes="512x512" href="images/icons/bit-icon-512.png" />
-    <Link rel="manifest" href="manifest.json" />
+
+    <Link rel="manifest" Href="manifest.json" />
+    <Link rel="icon" Href="favicon.ico" type="image/x-icon" />
+    <Link rel="apple-touch-icon" sizes="512x512" Href="images/icons/bit-icon-512.png" />
 </head>
 
 <body class="@BitCss.Class.Color.Background.Primary @BitCss.Class.Color.Foreground.Primary bit-blazor-web">
 
-    <Link rel="stylesheet" href="_content/Bit.BlazorUI/styles/bit.blazorui.css" />
-    <Link rel="stylesheet" href="_content/Bit.BlazorUI.Extras/styles/bit.blazorui.extras.css" />
-    <Link rel="stylesheet" href="_content/Bit.BlazorUI.Icons/styles/bit.blazorui.icons.css" />
-    <Link rel="stylesheet" href="_content/Bit.BlazorUI.Assets/styles/bit.blazorui.assets.css" />
-    <Link rel="stylesheet" href="_content/Bit.BlazorUI.Demo.Client.Core/styles/app.css" />
-    <Link rel="stylesheet" href="Bit.BlazorUI.Demo.Server.styles.css" />
-    <Link rel="stylesheet" href="_content/Bit.BlazorUI.Demo.Client.Core/prism-1.28.0/prism-okaidia-bit.css" />
+    <Link rel="stylesheet" Href="_content/Bit.BlazorUI/styles/bit.blazorui.css" />
+    <Link rel="stylesheet" Href="_content/Bit.BlazorUI.Extras/styles/bit.blazorui.extras.css" />
+    <Link rel="stylesheet" Href="_content/Bit.BlazorUI.Icons/styles/bit.blazorui.icons.css" />
+    <Link rel="stylesheet" Href="_content/Bit.BlazorUI.Assets/styles/bit.blazorui.assets.css" />
+    <Link rel="stylesheet" Href="_content/Bit.BlazorUI.Demo.Client.Core/styles/app.css" />
+    <Link rel="stylesheet" Href="Bit.BlazorUI.Demo.Server.styles.css" />
+    <Link rel="stylesheet" Href="_content/Bit.BlazorUI.Demo.Client.Core/prism-1.28.0/prism-okaidia-bit.css" />
 
     @if (AppRenderMode.PrerenderEnabled is false || noPrerender)
     {
@@ -50,8 +51,8 @@
         {
             <Script Src="_content/Bit.BlazorUI.Extras/marked/marked-15.0.7.js" AppendVersion="false"></Script>
         }
-        <Script Src="_content/Bit.BlazorES2019/blazor.web.js" autostart="false"></Script>
-        <Script Src="_content/Bit.Bswup/bit-bswup.js" blazorScript="_content/Bit.BlazorES2019/blazor.web.js"></Script>
+        <Script Src="_framework/bit.blazor.web.es2019.js" autostart="false"></Script>
+		<Script Src="_content/Bit.Bswup/bit-bswup.js" blazorScript="_framework/bit.blazor.web.es2019.js"></Script>
         <Script Src="_content/Bit.Bswup/bit-bswup.progress.js"></Script>
         <AppBswupProgressBar />
         <Script Src="_content/Bit.BlazorUI.Demo.Client.Core/prism-1.28.0/prism.js"></Script>

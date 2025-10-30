@@ -19,7 +19,8 @@ namespace BitBlazorUI {
             headerId: string,
             footerId: string,
             setCalloutWidth: boolean,
-            maxWidth: number,
+            fixedCalloutWidth: boolean,
+            maxWindowWidth: number,
         ) {
             component ??= document.getElementById(componentId);
             if (component == null) return false;
@@ -94,6 +95,11 @@ namespace BitBlazorUI {
                 callout.style.width = width + 'px';
                 calloutWidth = width;
             }
+            if (fixedCalloutWidth) {
+                let width = Math.min(componentWidth, calloutWidth);
+                callout.style.width = width + 'px';
+                calloutWidth = width;
+            }
 
             if (windowWidth < Utils.MAX_MOBILE_WIDTH && responsiveMode) {
                 callout.style.opacity = '1';
@@ -110,8 +116,8 @@ namespace BitBlazorUI {
             let left = componentX + (isRtl ? (componentWidth - calloutWidth) : 0);
             const right = left + calloutWidth;
             const correctedLeft = windowWidth - calloutWidth - 3;
-            if (maxWidth) {
-                left = (windowWidth >= maxWidth && (right > windowWidth)) ? correctedLeft : left;
+            if (maxWindowWidth) {
+                left = (windowWidth >= maxWindowWidth && (right > windowWidth)) ? correctedLeft : left;
             } else {
                 left = (right > windowWidth) ? correctedLeft : left;
             }

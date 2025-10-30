@@ -8,10 +8,9 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace Boilerplate.Client.Maui.Services;
 
-// Checkout HybridAppWebInterop.razor's comments.
+// Checkout Client.web/wwwroot/web-interop-app.html's comments.
 public partial class MauiLocalHttpServer : ILocalHttpServer
 {
-    [AutoInject] private HtmlRenderer htmlRenderer;
     [AutoInject] private PubSubService pubSubService;
     [AutoInject] private IExceptionHandler exceptionHandler;
 
@@ -37,7 +36,7 @@ public partial class MauiLocalHttpServer : ILocalHttpServer
 
         async Task GoBackToApp()
         {
-            if (AppPlatform.IsIOS)
+            if (AppPlatform.IsIos)
             {
                 // CloseBrowserPage.razor's `window.close()` does NOT work on iOS's in app browser.
                 await MainThread.InvokeOnMainThreadAsync(() =>
@@ -143,17 +142,10 @@ public partial class MauiLocalHttpServer : ILocalHttpServer
 
                 await GoBackToApp();
             }))
-            .WithModule(new ActionModule("/hybrid-app-web-interop", HttpVerbs.Get, async ctx =>
-            {
-                var html = await htmlRenderer.Dispatcher.InvokeAsync(async () =>
-                    (await htmlRenderer.RenderComponentAsync<HybridAppWebInterop>()).ToHtmlString());
-
-                await ctx.SendStringAsync(html, "text/html", Encoding.UTF8);
-            }))
             .OnAny(async ctx =>
             {
-                var ctxImpl = (IHttpContextImpl)ctx;
-                var requestFilePath = ctxImpl.Request.Url.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                var ctxImplementation = (IHttpContextImpl)ctx;
+                var requestFilePath = ctxImplementation.Request.Url.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
                 Stream? staticFileStream = null;
                 if (staticFiles.FirstOrDefault(f => f.EndsWith(requestFilePath, StringComparison.OrdinalIgnoreCase)) is string staticFilePath)
                 {

@@ -6,6 +6,10 @@ env:
   SERVER_ADDRESS: 'https://sales.bitplatform.dev'
   AzureOpenAI__ApiKey: ${{ secrets.AzureOpenAI__ApiKey }}
   AzureOpenAI__Endpoint: ${{ secrets.AzureOpenAI__Endpoint }}
+  AZUREOPENAI__MODEL: ${{ secrets.AZUREOPENAI__MODEL }}
+  OpenAI__ApiKey: ${{ secrets.OpenAI__ApiKey }}
+  OpenAI__Endpoint: ${{ secrets.OpenAI__Endpoint }}
+  OPENAI__MODEL: ${{ secrets.OPENAI__MODEL }}
 
 on:
   workflow_dispatch:
@@ -19,19 +23,19 @@ jobs:
 
   build_api_blazor:
     name: build api + blazor web
-    runs-on: ubuntu-24.04
+    runs-on: windows-2025
 
     steps:
     
     - name: Checkout source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
     
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         global-json-file: src/global.json
 
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with:
         node-version: 23
 
@@ -40,7 +44,7 @@ jobs:
         cd src/Templates/Boilerplate && dotnet build -c Release
         dotnet pack -c Release -o . -p:ReleaseVersion=0.0.0 -p:PackageVersion=0.0.0
         dotnet new install Bit.Boilerplate.0.0.0.nupkg
-        cd ../../../ && dotnet new bit-bp --name SalesModule --database PostgreSQL --module Sales --apiServerUrl ${{ env.SERVER_ADDRESS }} --webAppUrl ${{ env.SERVER_ADDRESS }} --filesStorage AzureBlobStorage --notification --captcha reCaptcha --signalR --ads
+        cd ../../../ && dotnet new bit-bp --name SalesModule --database PostgreSQL --module Sales --appInsights --apiServerUrl ${{ env.SERVER_ADDRESS }} --webAppUrl ${{ env.SERVER_ADDRESS }} --filesStorage AzureBlobStorage --notification --captcha reCaptcha --signalR --ads
 
     - name: Update core appsettings.json
       uses: devops-actions/variable-substitution@v1.2 
@@ -59,25 +63,25 @@ jobs:
 
     - name: Configure bswup
       run: |
-          sed -i "s/\/\/ self.prerenderMode = 'always'/self.prerenderMode = 'always'/g" SalesModule/src/Client/SalesModule.Client.Web/wwwroot/service-worker.published.js
+          sed -i "s/\/\/ self.mode = 'AlwaysPrerender'/self.mode = 'AlwaysPrerender'/g" SalesModule/src/Client/SalesModule.Client.Web/wwwroot/service-worker.published.js
 
     - name: Configure text embedding
       run: |
-          sed -i 's/EmbeddingIsEnabled = false/EmbeddingIsEnabled = true/' SalesModule/src/Server/SalesModule.Server.Api/Data/AppDbContext.cs
+          sed -i 's/IsEmbeddingEnabled = false/IsEmbeddingEnabled = true/' SalesModule/src/Server/SalesModule.Server.Api/Data/AppDbContext.cs
 
     - name: Generate CSS/JS files
       run: |
-          dotnet build SalesModule/src/Client/SalesModule.Client.Core/SalesModule.Client.Core.csproj -t:BeforeBuildTasks -p:Version="${{ vars.APPLICATION_DISPLAY_VERSION}}" -p:InvariantGlobalization=true --no-restore -c Release
-          dotnet build SalesModule/src/Client/SalesModule.Client.Web/SalesModule.Client.Web.csproj -t:BeforeBuildTasks -p:Version="${{ vars.APPLICATION_DISPLAY_VERSION}}" -p:InvariantGlobalization=true --no-restore -c Release
+          dotnet build SalesModule/src/Client/SalesModule.Client.Core/SalesModule.Client.Core.csproj -t:BeforeBuildTasks -p:Version="${{ vars.APP_VERSION}}" -p:InvariantGlobalization=true --no-restore -c Release
+          dotnet build SalesModule/src/Client/SalesModule.Client.Web/SalesModule.Client.Web.csproj -t:BeforeBuildTasks -p:Version="${{ vars.APP_VERSION}}" -p:InvariantGlobalization=true --no-restore -c Release
 
     - name: Publish
-      run: dotnet publish SalesModule/src/Server/SalesModule.Server.Web/SalesModule.Server.Web.csproj -c Release -r linux-x64 -o ${{env.DOTNET_ROOT}}/server -p:Version="${{ vars.APPLICATION_DISPLAY_VERSION}}"  -p:InvariantGlobalization=true -p:WasmEnableSIMD=false
+      run: dotnet publish SalesModule/src/Server/SalesModule.Server.Web/SalesModule.Server.Web.csproj -c Release -o server -p:Version="${{ vars.APP_VERSION}}"  -p:InvariantGlobalization=true
 
     - name: Upload server artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: server-bundle
-        path: ${{env.DOTNET_ROOT}}/server
+        path: server
         include-hidden-files: true # Required for wwwroot/.well-known folder
 
   deploy_api_blazor:
@@ -91,12 +95,12 @@ jobs:
     steps:
 
       - name: Retrieve server bundle
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: server-bundle
 
-      # - name: Retrieve AppleAuthKey.p8
-      #   run: echo "${{ secrets.APPSTORE_API_KEY_PRIVATE_KEY_SALES }}" > AppleAuthKey.p8
+      - name: Retrieve AppleAuthKey.p8
+        run: echo "${{ secrets.APPSTORE_API_KEY_PRIVATE_KEY_SALES }}" > AppleAuthKey.p8
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
@@ -115,19 +119,19 @@ jobs:
 
   build_blazor_hybrid_windows:
     name: build blazor hybrid (windows)
-    runs-on: windows-2022
+    runs-on: windows-2025
   
     steps:
      
     - name: Checkout source code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         global-json-file: src\global.json
 
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v6
       with:
         node-version: 23
 
@@ -136,7 +140,7 @@ jobs:
         cd src\Templates\Boilerplate && dotnet build -c Release
         dotnet pack -c Release -o . -p:ReleaseVersion=0.0.0 -p:PackageVersion=0.0.0
         dotnet new install Bit.Boilerplate.0.0.0.nupkg
-        cd ..\..\..\ && dotnet new bit-bp --name SalesModule --database PostgreSQL --module Sales --appInsights --apiServerUrl ${{ env.SERVER_ADDRESS }} --webAppUrl ${{ env.SERVER_ADDRESS }} --filesStorage AzureBlobStorage --captcha reCaptcha --signalR --ads
+        cd ..\..\..\ && dotnet new bit-bp --name SalesModule --database PostgreSQL --module Sales --sentry --apiServerUrl ${{ env.SERVER_ADDRESS }} --webAppUrl ${{ env.SERVER_ADDRESS }} --filesStorage AzureBlobStorage --captcha reCaptcha --signalR --ads
   
     - name: Update core appsettings.json
       uses: devops-actions/variable-substitution@v1.2 
@@ -145,9 +149,9 @@ jobs:
       env:
         WebAppUrl: ${{ env.SERVER_ADDRESS }}
         ServerAddress: ${{ env.SERVER_ADDRESS }}
+        Logging.Sentry.Dsn: ${{ secrets.ADMINPANEL_SENTRY_DSN }}
         GoogleRecaptchaSiteKey: ${{ secrets.GOOGLE_RECAPTCHA_SITE_KEY }}
         WindowsUpdate.FilesUrl: https://windows-sales.bitplatform.dev
-        ApplicationInsights.ConnectionString: ${{ secrets.APPLICATION_INSIGHTS_CONNECTION_STRING }}
 
     - name: Use Bit.ResxTranslator
       run: |
@@ -156,17 +160,17 @@ jobs:
             bit-resx-translate
 
     - name: Generate CSS/JS files
-      run: dotnet build SalesModule\src\Client\SalesModule.Client.Core\SalesModule.Client.Core.csproj -t:BeforeBuildTasks -p:Version="${{ vars.APPLICATION_DISPLAY_VERSION}}" --no-restore -c Release
+      run: dotnet build SalesModule\src\Client\SalesModule.Client.Core\SalesModule.Client.Core.csproj -t:BeforeBuildTasks -p:Version="${{ vars.APP_VERSION}}" --no-restore -c Release
 
     - name: Publish
       run: |
           cd SalesModule\src\Client\SalesModule.Client.Windows\
-          dotnet publish SalesModule.Client.Windows.csproj -c Release -o .\publish-result -r win-x64 -p:Version="${{ vars.APPLICATION_DISPLAY_VERSION}}" -p:PublishReadyToRun=true -p:PublishReadyToRunComposite=true --self-contained
+          dotnet publish SalesModule.Client.Windows.csproj -c Release -o .\publish-result -r win-x64 -p:Version="${{ vars.APP_VERSION}}" -p:PublishReadyToRun=true -p:PublishReadyToRunComposite=true --self-contained
           dotnet tool restore
-          dotnet vpk pack -u SalesModule.Client.Windows -v "${{ vars.APPLICATION_DISPLAY_VERSION }}" -p .\publish-result -e SalesModule.Client.Windows.exe -r win-x64 --framework webview2 --icon .\wwwroot\favicon.ico --packTitle 'SalesModule'
+          dotnet vpk pack -u SalesModule.Client.Windows -v "${{ vars.APP_VERSION }}" -p .\publish-result -e SalesModule.Client.Windows.exe -r win-x64 --framework webview2 --icon .\wwwroot\favicon.ico --packTitle 'SalesModule'
   
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: win-exe-bundle
         path: SalesModule\src\Client\SalesModule.Client.Windows\Releases

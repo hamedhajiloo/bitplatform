@@ -18,8 +18,10 @@ public partial class SignInPanel
     private SignInPanelType internalSignInPanelType;
     private readonly SignInRequestDto model = new();
     private AppDataAnnotationsValidator? validatorRef;
-    private string ReturnUrl => ReturnUrlQueryString ?? NavigationManager.GetRelativePath() ?? Urls.HomePage;
+    private string GetReturnUrl() => ReturnUrl ?? ReturnUrlQueryString ?? PageUrls.Home;
 
+    [Parameter]
+    public string? ReturnUrl { get; set; }
 
     [Parameter, SupplyParameterFromQuery(Name = "return-url")]
     public string? ReturnUrlQueryString { get; set; }
@@ -116,11 +118,10 @@ public partial class SignInPanel
                 var response = await identityController
                     .WithQueryIf(AppPlatform.IsBlazorHybrid, "origin", localHttpServer.Origin)
                     .VerifyWebAuthAndSignIn(
-                        new VerifyWebAuthnAndSignInDto
+                        new VerifyWebAuthnAndSignInRequestDto
                         {
                             ClientResponse = webAuthnAssertion.Value,
-                            TfaCode = model.TwoFactorCode,
-                            DeviceInfo = telemetryContext.Platform
+                            TfaCode = model.TwoFactorCode
                         },
                         CurrentCancellationToken);
 
@@ -140,8 +141,7 @@ public partial class SignInPanel
 
                 if (isNewUser is false)
                 {
-                    model.ReturnUrl = ReturnUrl;
-                    model.DeviceInfo = telemetryContext.Platform;
+                    model.ReturnUrl = GetReturnUrl();
 
                     requiresTwoFactor = await AuthManager.SignIn(model, CurrentCancellationToken);
 
@@ -154,8 +154,7 @@ public partial class SignInPanel
                         var signInResponse = await identityController.ConfirmEmail(new()
                         {
                             Token = model.Otp,
-                            Email = model.Email,
-                            DeviceInfo = telemetryContext.Platform
+                            Email = model.Email
                         }, CurrentCancellationToken);
 
                         await AuthManager.StoreTokens(signInResponse, true);
@@ -165,8 +164,7 @@ public partial class SignInPanel
                         var signInResponse = await identityController.ConfirmPhone(new()
                         {
                             Token = model.Otp,
-                            PhoneNumber = model.PhoneNumber,
-                            DeviceInfo = telemetryContext.Platform
+                            PhoneNumber = model.PhoneNumber
                         }, CurrentCancellationToken);
 
                         await AuthManager.StoreTokens(signInResponse, true);
@@ -187,7 +185,7 @@ public partial class SignInPanel
                 }
                 else
                 {
-                    NavigationManager.NavigateTo(ReturnUrl ?? Urls.HomePage, replace: true);
+                    NavigationManager.NavigateTo(GetReturnUrl(), replace: true);
                 }
             }
         }
@@ -230,7 +228,7 @@ public partial class SignInPanel
                 }
 
                 queryParams.TryGetValue("return-url", out var returnUrl);
-                ReturnUrlQueryString = GetValue(returnUrl ?? Urls.HomePage);
+                ReturnUrlQueryString = GetValue(returnUrl ?? PageUrls.Home);
                 queryParams.TryGetValue("userName", out var userName);
                 UserNameQueryString = GetValue(userName);
                 queryParams.TryGetValue("email", out var email);
@@ -247,7 +245,7 @@ public partial class SignInPanel
 
             var port = localHttpServer.EnsureStarted();
 
-            var redirectUrl = await identityController.GetSocialSignInUri(provider, ReturnUrl, port is -1 ? null : port, CurrentCancellationToken);
+            var redirectUrl = await identityController.GetSocialSignInUri(provider, GetReturnUrl(), port is -1 ? null : port, CurrentCancellationToken);
 
             await externalNavigationService.NavigateToAsync(redirectUrl);
         }
@@ -281,7 +279,7 @@ public partial class SignInPanel
             catch (Exception ex)
             {
                 // we can safely handle the exception thrown here since it mostly because of a timeout or user cancelling the native ui.
-                ExceptionHandler.Handle(ex, AppEnvironment.IsDev() ? ExceptionDisplayKind.NonInterrupting : ExceptionDisplayKind.None);
+                ExceptionHandler.Handle(ex, AppEnvironment.IsDevelopment() ? ExceptionDisplayKind.NonInterrupting : ExceptionDisplayKind.None);
                 webAuthnAssertion = null;
                 return;
             }
@@ -323,11 +321,11 @@ public partial class SignInPanel
 
             var request = new IdentityRequestDto { UserName = model.UserName, Email = model.Email, PhoneNumber = model.PhoneNumber };
 
-            await identityController.SendOtp(request, ReturnUrl, CurrentCancellationToken);
+            await identityController.SendOtp(request, GetReturnUrl(), CurrentCancellationToken);
 
             isOtpSent = true;
         }
-        catch (TooManyRequestsExceptions e)
+        catch (TooManyRequestsException e)
         {
             isOtpSent = true;
             SnackBarService.Error(e.Message);
@@ -378,19 +376,26 @@ public partial class SignInPanel
 
     private void CleanModel()
     {
+        if (internalSignInPanelType is SignInPanelType.Otp)
+        {
+            model.Password = null;
+            validatorRef?.EditContext.NotifyFieldChanged(validatorRef.EditContext.Field(nameof(SignInRequestDto.Password)));
+        }
+        else if (internalSignInPanelType is SignInPanelType.Password && isOtpSent is false)
+        {
+            model.Otp = null;
+            validatorRef?.EditContext.NotifyFieldChanged(validatorRef.EditContext.Field(nameof(SignInRequestDto.Otp)));
+        }
+
         if (currentTab is SignInPanelTab.Email)
         {
             model.PhoneNumber = null;
-            if (validatorRef is null) return;
-
-            validatorRef.EditContext.NotifyFieldChanged(validatorRef.EditContext.Field(nameof(SignInRequestDto.PhoneNumber)));
+            validatorRef?.EditContext.NotifyFieldChanged(validatorRef.EditContext.Field(nameof(SignInRequestDto.PhoneNumber)));
         }
         else
         {
             model.Email = null;
-            if (validatorRef is null) return;
-
-            validatorRef.EditContext.NotifyFieldChanged(validatorRef.EditContext.Field(nameof(SignInRequestDto.Email)));
+            validatorRef?.EditContext.NotifyFieldChanged(validatorRef.EditContext.Field(nameof(SignInRequestDto.Email)));
         }
     }
 

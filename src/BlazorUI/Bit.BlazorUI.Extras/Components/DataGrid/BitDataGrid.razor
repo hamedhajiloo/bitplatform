@@ -2,10 +2,14 @@
 @typeparam TGridItem
 
 <CascadingValue TValue="InternalGridContext<TGridItem>" IsFixed="true" Value="@_internalGridContext">
-    @{ StartCollectingColumns(); }
-    @ChildContent
-    <Defer>
-        @{ FinishCollectingColumns(); }
+    @{
+        StartCollectingColumns();
+    }
+    @(Columns ?? ChildContent)
+    <BitDataGridDefer>
+        @{
+            FinishCollectingColumns();
+        }
         <BitDataGridColumnsCollectedNotifier TGridItem="TGridItem" />
 
         <table class="@GridClass()" theme="@Theme" aria-rowcount="@(_ariaBodyRowCount + 1)" @ref="_tableReference" @onclosecolumnoptions="CloseColumnOptions">
@@ -18,26 +22,37 @@
                 @if (Virtualize)
                 {
                     <Virtualize @ref="@_virtualizeComponent"
-                        TItem="(int RowIndex, TGridItem Data)"
-                        ItemSize="@ItemSize"
-                        ItemsProvider="@ProvideVirtualizedItems"
-                        ItemContent="@(item => builder => RenderRow(builder, item.RowIndex, item.Data))"
-                        Placeholder="@(placeholderContext => builder => RenderPlaceholderRow(builder, placeholderContext))" />
+                                ItemSize="@ItemSize"
+                                TItem="(int RowIndex, TGridItem Data)"
+                                ItemsProvider="@ProvideVirtualizedItems"
+                                ItemContent="@(item => builder => RenderRow(builder, item.RowIndex, item.Data))"
+                    Placeholder="@(placeholderContext => builder => RenderPlaceholderRow(builder, placeholderContext))" />
                 }
                 else
                 {
-                    @_renderNonVirtualizedRows
+                    if (IsLoading && LoadingTemplate is not null)
+                    {
+                        <tr>
+                            <td colspan="100">
+                                @LoadingTemplate
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @_renderNonVirtualizedRows
+                    }
                 }
             </tbody>
         </table>
-    </Defer>
+    </BitDataGridDefer>
 </CascadingValue>
 
 @code {
     private void RenderNonVirtualizedRows(RenderTreeBuilder __builder)
     {
         var initialRowIndex = 2; // aria-rowindex is 1-based, plus the first row is the header
-        var rowIndex = initialRowIndex; 
+        var rowIndex = initialRowIndex;
         foreach (var item in _currentNonVirtualizedViewItems)
         {
             RenderRow(__builder, rowIndex++, item);
@@ -57,10 +72,14 @@
 
     private void RenderRow(RenderTreeBuilder __builder, int rowIndex, TGridItem item)
     {
-        <tr @key="@(ItemKey(item))" aria-rowindex="@rowIndex">
+        <tr @key="@(ItemKey(item))" aria-rowindex="@rowIndex" class="@GetRowClass(item)" style="@GetRowStyle(item)">
             @foreach (var col in _columns)
             {
-                <td class="@ColumnClass(col)" @key="@col">@{ col.CellContent(__builder, item); }</td>
+                <td class="@ColumnClass(col)" @key="@col" data-title="@col.Title">
+                    @{
+                        col.CellContent(__builder, item);
+                    }
+                </td>
             }
         </tr>
     }
@@ -70,7 +89,11 @@
         <tr aria-rowindex="@(placeholderContext.Index + 1)">
             @foreach (var col in _columns)
             {
-                <td class="grid-cell-placeholder @ColumnClass(col)" @key="@col">@{ col.RenderPlaceholderContent(__builder, placeholderContext); }</td>
+                <td class="bit-dtg-plh @ColumnClass(col)" @key="@col">
+                    @{
+                        col.RenderPlaceholderContent(__builder, placeholderContext);
+                    }
+                </td>
             }
         </tr>
     }
@@ -80,16 +103,16 @@
         foreach (var col in _columns)
         {
             <th class="@ColumnHeaderClass(col)" aria-sort="@AriaSortValue(col)" @key="@col" scope="col">
-                <div class="col-header-content">@col.HeaderContent</div>
+                <div class="bit-dtg-hct">@col.HeaderContent</div>
 
                 @if (col == _displayOptionsForColumn)
                 {
-                    <div class="col-options">@col.ColumnOptions</div>
+                    <div class="bit-dtg-cop">@col.ColumnOptions</div>
                 }
 
                 @if (ResizableColumns)
                 {
-                    <div class="col-width-draghandle"></div>
+                    <div class="bit-dtg-drg"></div>
                 }
             </th>
         }

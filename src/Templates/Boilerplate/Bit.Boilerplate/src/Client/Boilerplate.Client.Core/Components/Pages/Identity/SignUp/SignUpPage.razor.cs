@@ -31,7 +31,7 @@ public partial class SignUpPage
 
         signUpModel.GoogleRecaptchaResponse = googleRecaptchaResponse;
         //#endif
-        signUpModel.ReturnUrl = ReturnUrlQueryString ?? Urls.HomePage;
+        signUpModel.ReturnUrl = ReturnUrlQueryString ?? PageUrls.Home;
 
         isWaiting = true;
 
@@ -45,7 +45,7 @@ public partial class SignUpPage
         {
             NavigateToConfirmPage();
         }
-        catch (TooManyRequestsExceptions e)
+        catch (TooManyRequestsException e)
         {
             SnackBarService.Error(e.Message);
             NavigateToConfirmPage();
@@ -82,7 +82,7 @@ public partial class SignUpPage
         {
             queryParams.Add("phoneNumber", signUpModel.PhoneNumber);
         }
-        var confirmUrl = NavigationManager.GetUriWithQueryParameters(Urls.ConfirmPage, queryParams);
+        var confirmUrl = NavigationManager.GetUriWithQueryParameters(PageUrls.Confirm, queryParams);
         NavigationManager.NavigateTo(confirmUrl, replace: true);
     }
 

@@ -80,6 +80,10 @@
                     "description": "Use either the local App_Data folder or the /container_volume for Docker containers."
                 },
                 {
+                    "choice": "S3",
+                    "description": "S3"
+                },
+                {
                     "choice": "AzureBlobStorage",
                     "description": "Azure blob storage"
                 },
@@ -162,11 +166,18 @@
                 }
             ]
         },
+        "aspire": {
+            "displayName": "Add aspire?",
+            "type": "parameter",
+            "datatype": "bool",
+            "defaultValue": "true",
+            "description": "Adds aspire"
+        },
         "notification": {
             "displayName": "Add push notification?",
             "type": "parameter",
             "datatype": "bool",
-            "defaultValue": "false",
+            "defaultValue": "true",
             "description": "Adds push notification."
         },
         "sample": {
@@ -264,6 +275,33 @@
             },
             "replaces": "5030"
         },
+        "aspirePortGenerated_1": {
+            "type": "generated",
+            "generator": "port",
+            "parameters": {
+                "low": 2001,
+                "high": 2300
+            },
+            "replaces": "2030"
+        },
+        "aspirePortGenerated_2": {
+            "type": "generated",
+            "generator": "port",
+            "parameters": {
+                "low": 2001,
+                "high": 2300
+            },
+            "replaces": "2031"
+        },
+        "aspirePortGenerated_3": {
+            "type": "generated",
+            "generator": "port",
+            "parameters": {
+                "low": 2001,
+                "high": 2300
+            },
+            "replaces": "2032"
+        },
         "serveApiPortGenerated": {
             "type": "generated",
             "generator": "port",
@@ -325,13 +363,6 @@
                 ]
             },
             "replaces": "use-your-web-app-url-here.com"
-        },
-        "advancedTests": {
-            "displayName": "Include advanced automated tests?",
-            "type": "parameter",
-            "datatype": "bool",
-            "defaultValue": "false",
-            "description": "Includes advanced automated tests."
         }
     },
     "postActions": [
@@ -395,7 +426,7 @@
                 {
                     "condition": "(pipeline != GitHub)",
                     "exclude": [
-                        ".github/**"
+                        ".github/workflows**"
                     ]
                 },
                 {
@@ -414,9 +445,9 @@
                         "src/Shared/Controllers/Dashboard/**",
                         "src/Shared/Controllers/Categories/**",
                         "src/Shared/Controllers/Products/IProductController.cs",
-                        "src/Client/Boilerplate.Client.Core/Components/Pages/Authorized/Dashboard/**",
-                        "src/Client/Boilerplate.Client.Core/Components/Pages/Authorized/Categories/**",
-                        "src/Client/Boilerplate.Client.Core/Components/Pages/Authorized/Products/**"
+                        "src/Client/Boilerplate.Client.Core/Components/Pages/Dashboard/**",
+                        "src/Client/Boilerplate.Client.Core/Components/Pages/Categories/**",
+                        "src/Client/Boilerplate.Client.Core/Components/Pages/Products/**"
                     ]
                 },
                 {
@@ -453,7 +484,8 @@
                         "src/Server/Boilerplate.Server.Api/Models/Todo/**",
                         "src/Server/Boilerplate.Server.Api/Data/Configurations/Todo/**",
                         "src/Shared/Controllers/Todo/**",
-                        "src/Client/Boilerplate.Client.Core/Components/Pages/Authorized/Todo/**"
+                        "src/Client/Boilerplate.Client.Core/Components/Pages/TodoPage.*",
+                        "src/Client/Boilerplate.Client.Core/images/backgrounds/empty-todo-list-bg.svg"
                     ]
                 },
                 {
@@ -470,6 +502,12 @@
                     ]
                 },
                 {
+                    "condition": "(filesStorage != S3)",
+                    "exclude": [
+                        "src/Server/Boilerplate.Server.Api/Services/S3HttpClientFactory.cs"
+                    ]
+                },
+                {
                     "condition": "(signalR != true)",
                     "exclude": [
                         "src/Shared/Dtos/Chatbot/**",
@@ -483,12 +521,12 @@
                         "src/Server/Boilerplate.Server.Api/Mappers/ChatbotMapper.cs",
                         "src/Server/Boilerplate.Server.Api/Data/Configurations/Chatbot/**",
                         "src/Client/Boilerplate.Client.Core/Components/Layout/AppAiChatPanel.*",
-                        "src/Client/Boilerplate.Client.Core/Components/Pages/Authorized/Chatbot/**",
+                        "src/Client/Boilerplate.Client.Core/Components/Pages/SystemPromptsPage.*",
                         "src/Client/Boilerplate.Client.Core/Services/SignalRInfiniteRetryPolicy.cs"
                     ]
                 },
                 {
-                    "condition": "(signalR != true && database != PostgreSQL)",
+                    "condition": "(database != PostgreSQL && database != SqlServer)",
                     "exclude": [
                         "src/Server/Boilerplate.Server.Api/Services/ProductEmbeddingService.cs"
                     ]
@@ -520,7 +558,7 @@
                     ]
                 },
                 {
-                    "condition": "(signalR != true && notification != PostgreSQL)",
+                    "condition": "(signalR != true && notification != true)",
                     "exclude": [
                         "src/Shared/Boilerplate.Shared/Dtos/Identity/SendNotificationToRoleDto.cs"
                     ]
@@ -558,39 +596,19 @@
                     "condition": "(api == Integrated)",
                     "exclude": [
                         "src/Server/Boilerplate.Server.Web/appsettings*.json",
-                        "src/Server/Boilerplate.Server.Web/Services/AppResponseCachePolicy.cs",
-                        "src/Server/Boilerplate.Server.Web/Services/SimpleJwtSecureDataFormat.cs",
-                        "src/Server/Boilerplate.Server.Web/Extensions/HttpContextExtensions.cs"
+                        "src/Server/Boilerplate.Server.Web/Services/SimpleJwtSecureDataFormat.cs"
                     ]
                 },
                 {
-                    "condition": "(advancedTests != true)",
+                    "condition": "(aspire == false)",
                     "exclude": [
-                        "src/Tests/PageTests/**",
-                        "src/Tests/Services/CulturedStringLocalizer.cs",
-                        "src/Tests/Services/EmailReaderService.cs",
-                        "src/Tests/Services/UserService.cs",
-                        "src/Tests/Services/FakePhoneService.cs",
-                        "src/Tests/Services/FakeGoogleRecaptchaService.cs",
-                        "src/Tests/Extensions/PlaywrightAssetCachingExtensions.cs",
-                        "src/Tests/Extensions/PlaywrightCacheStorageExtensions.cs",
-                        "src/Tests/Extensions/PlaywrightNetworkExtensions.cs",
-                        "src/Tests/Extensions/PlaywrightCacheExtensions.cs",
-                        "src/Tests/Extensions/PlaywrightHydrationExtensions.cs",
-                        "src/Tests/Extensions/BrowserContextExtensions.cs"
-                    ]
-                },
-                {
-                    "condition": "(advancedTests == true)",
-                    "exclude": [
-                        "src/Tests/IdentityApiTests.cs",
-                        "src/Tests/IdentityPagesTests.cs"
+                        "src/Server/Boilerplate.Server.AppHost/**"
                     ]
                 },
                 {
                     "condition": "(ads != true)",
                     "exclude": [
-                        "src/Client/Boilerplate.Client.Core/Components/Pages/Authorized/Settings/UpgradeAccountSection*.*",
+                        "src/Client/Boilerplate.Client.Core/Components/Pages/Settings/UpgradeAccountSection*.*",
                         "src/Client/Boilerplate.Client.Core/Scripts/Ads.ts",
                         "src/Client/Boilerplate.Client.Core/Services/Contracts/IAdsService.cs",
                         "src/Client/Boilerplate.Client.Core/Services/AdsService.cs"

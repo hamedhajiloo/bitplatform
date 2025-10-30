@@ -33,25 +33,25 @@ public partial class ServerExceptionHandler : SharedExceptionHandler, IProblemDe
 
         if (exception is AuthenticationFailureException)
         {
-            httpContext.Response.Redirect($"{Urls.SignInPage}?error={Uri.EscapeDataString(exception.Message)}");
+            httpContext.Response.Redirect($"{PageUrls.SignIn}?error={Uri.EscapeDataString(exception.Message)}");
             return;
         }
 
-        await httpContext.Response.WriteAsJsonAsync(problemDetail!, jsonSerializerOptions.GetTypeInfo<ProblemDetails>(), cancellationToken: httpContext.RequestAborted);
+        await httpContext.Response.WriteAsJsonAsync(problemDetail!, jsonSerializerOptions.GetTypeInfo<AppProblemDetails>(), cancellationToken: httpContext.RequestAborted);
     }
 
     private void Handle(Exception exception,
         Dictionary<string, object?>? parameters,
         HttpContext? httpContext,
         out int statusCode,
-        out ProblemDetails? problemDetails)
+        out AppProblemDetails? problemDetails)
     {
         var data = new Dictionary<string, object?>()
         {
             { "ActivityId", Activity.Current?.Id },
             { "ParentActivityId", Activity.Current?.ParentId },
             { "ServerAppSessionId", appSessionId },
-            { "AppVersion", typeof(ServerExceptionHandler).Assembly.GetName().Version },
+            { "ServerAppVersion", typeof(ServerExceptionHandler).Assembly.GetName().Version },
             { "Culture", CultureInfo.CurrentUICulture.Name },
             { "Environment", env.EnvironmentName },
             { "ServerDateTime", DateTimeOffset.UtcNow.ToString("u") },
@@ -66,6 +66,16 @@ public partial class ServerExceptionHandler : SharedExceptionHandler, IProblemDe
             {
                 traceIdentifier = httpContext.TraceIdentifier;
                 instance = $"{httpContext.Request.Method} {httpContext.Request.GetUri().PathAndQuery}";
+
+                if (httpContext.Request.Headers.TryGetValue("X-App-Version", out var appVersionHeaderValue) && appVersionHeaderValue.Any())
+                {
+                    data["ClientAppVersion"] = appVersionHeaderValue.Single();
+                }
+
+                if (httpContext.Request.Headers.TryGetValue("X-App-Platform", out var appPlatformHeaderValues) && appPlatformHeaderValues.Any())
+                {
+                    data["ClientAppPlatform"] = appPlatformHeaderValues.Single();
+                }
 
                 data["Instance"] = instance;
                 data["RequestId"] = httpContext.TraceIdentifier;
@@ -107,8 +117,10 @@ public partial class ServerExceptionHandler : SharedExceptionHandler, IProblemDe
             }
         }
 
-        using (var scope = logger.BeginScope(data))
+        if (IgnoreException(exception) is false)
         {
+            using var scope = logger.BeginScope(data);
+
             var exceptionMessageToLog = GetExceptionMessageToLog(exception);
 
             if (exception is KnownException)
@@ -131,7 +143,7 @@ public partial class ServerExceptionHandler : SharedExceptionHandler, IProblemDe
             message = Localizer[message];
         }
 
-        problemDetails = new ProblemDetails
+        problemDetails = new AppProblemDetails
         {
             Title = message,
             Status = statusCode,
@@ -158,7 +170,7 @@ public partial class ServerExceptionHandler : SharedExceptionHandler, IProblemDe
         }
     }
 
-    public ProblemDetails? Handle(Exception exp,
+    public AppProblemDetails? Handle(Exception exp,
         Dictionary<string, object?>? parameters = null)
     {
         Handle(UnWrapException(exp), parameters, httpContextAccessor.HttpContext, out var _, out var problemDetails);

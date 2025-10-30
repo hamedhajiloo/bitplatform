@@ -8,7 +8,7 @@
                 "IN_APP_SCSS_COMPILER_ENABLED": "true"
             },
             "dotnetRunMessages": true,
-            "applicationUrl": "http://localhost:5030"
+            "applicationUrl": "http://*:5030"
         },
         //#if (api == "Integrated")
         "Boilerplate.Server.Web-Swagger": {
@@ -19,7 +19,7 @@
                 "ASPNETCORE_ENVIRONMENT": "Development"
             },
             "dotnetRunMessages": true,
-            "applicationUrl": "http://localhost:5030"
+            "applicationUrl": "http://*:5030"
         },
         //#endif
         "Boilerplate.Server.Web-BlazorWebAssembly": {
@@ -32,7 +32,7 @@
             },
             "dotnetRunMessages": true,
             "inspectUri": "{wsProtocol}://{url.hostname}:{url.port}/_framework/debug/ws-proxy?browser={browserInspectUri}",
-            "applicationUrl": "http://localhost:5030"
+            "applicationUrl": "http://*:5030"
         },
         "WSL": {
             "commandName": "WSL2",
@@ -40,7 +40,7 @@
             "launchUrl": "http://localhost:5030/",
             "environmentVariables": {
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "ASPNETCORE_URLS": "http://localhost:5030"
+                "ASPNETCORE_URLS": "http://*:5030"
             }
         },
         "Docker": {
@@ -50,7 +50,7 @@
             "environmentVariables": {
                 "ASPNETCORE_HTTP_PORTS": "5030",
                 "ASPNETCORE_ENVIRONMENT": "Development",
-                "ConnectionStrings__SqliteConnectionString": "Data Source=/container_volume/App_Data/BoilerplateDb.db;"
+                "ConnectionStrings__sqlite": "Data Source=/container_volume/App_Data/BoilerplateDb.db;"
             },
             "DockerfileRunArguments": "-v C:\\DockerVolumes\\AC87AA5B-4B37-4E52-8468-2D5DF24AF256:/container_volume",
             "publishAllPorts": true,
@@ -61,16 +61,27 @@
             "commandName": "IISExpress",
             "launchBrowser": true,
             "environmentVariables": {
-                "ASPNETCORE_ENVIRONMENT": "Development"
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "IN_APP_SCSS_COMPILER_ENABLED": "true"
+            }
+        },
+        "IIS": {
+            "commandName": "IIS",
+            "launchBrowser": true,
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "IN_APP_SCSS_COMPILER_ENABLED": "true"
             }
         }
     },
     "iisSettings": {
         "windowsAuthentication": false,
         "anonymousAuthentication": true,
+        "iis": {
+            "applicationUrl": "http://localhost:5030/"
+        },
         "iisExpress": {
-            "applicationUrl": "http://localhost:55030/",
-            "httpPort": 5030
+            "applicationUrl": "http://localhost:5030/"
         }
     },
     "$schema": "http://json.schemastore.org/launchsettings.json"

@@ -94,8 +94,21 @@ public partial class UserController : AppControllerBase, IUserController
         //#endif
     }
 
+    [HttpPost]
+    public async Task UpdateSession(UpdateUserSessionRequestDto request, CancellationToken cancellationToken)
+    {
+        var affectedRows = await DbContext.UserSessions.Where(us => us.Id == User.GetSessionId()).ExecuteUpdateAsync(us =>
+            us.SetProperty(x => x.AppVersion, request.AppVersion)
+                .SetProperty(x => x.DeviceInfo, request.DeviceInfo)
+                .SetProperty(x => x.PlatformType, request.PlatformType)
+                .SetProperty(x => x.CultureName, request.CultureName), cancellationToken);
+
+        if (affectedRows == 0)
+            throw new ResourceNotFoundException();
+    }
+
     [HttpPut]
-    public async Task<UserDto> Update(EditUserDto userDto, CancellationToken cancellationToken)
+    public async Task<UserDto> Update(EditUserRequestDto userDto, CancellationToken cancellationToken)
     {
         var userId = User.GetUserId();
 
@@ -161,7 +174,7 @@ public partial class UserController : AppControllerBase, IUserController
         var resendDelay = (DateTimeOffset.Now - user!.EmailTokenRequestedOn) - AppSettings.Identity.EmailTokenLifetime;
 
         if (resendDelay < TimeSpan.Zero)
-            throw new TooManyRequestsExceptions(Localizer[nameof(AppStrings.WaitForEmailTokenRequestResendDelay), resendDelay.Value.Humanize(culture: CultureInfo.CurrentUICulture)]).WithExtensionData("TryAgainIn", resendDelay);
+            throw new TooManyRequestsException(Localizer[nameof(AppStrings.WaitForEmailTokenRequestResendDelay), resendDelay.Value.Humanize(culture: CultureInfo.CurrentUICulture)]).WithExtensionData("TryAgainIn", resendDelay);
 
         user.EmailTokenRequestedOn = DateTimeOffset.Now;
         var result = await userManager.UpdateAsync(user);
@@ -175,7 +188,7 @@ public partial class UserController : AppControllerBase, IUserController
 
         var link = new Uri(
             HttpContext.Request.GetWebAppUrl(),
-            $"{Urls.SettingsPage}/{Urls.SettingsSections.Account}?email={Uri.EscapeDataString(request.Email!)}&emailToken={Uri.EscapeDataString(token)}&culture={CultureInfo.CurrentUICulture.Name}");
+            $"{PageUrls.Settings}/{PageUrls.SettingsSections.Account}?email={Uri.EscapeDataString(request.Email!)}&emailToken={Uri.EscapeDataString(token)}&culture={CultureInfo.CurrentUICulture.Name}");
 
         await emailService.SendEmailToken(user, request.Email!, token, link, cancellationToken);
     }
@@ -222,7 +235,7 @@ public partial class UserController : AppControllerBase, IUserController
         var resendDelay = (DateTimeOffset.Now - user!.PhoneNumberTokenRequestedOn) - AppSettings.Identity.PhoneNumberTokenLifetime;
 
         if (resendDelay < TimeSpan.Zero)
-            throw new TooManyRequestsExceptions(Localizer[nameof(AppStrings.WaitForPhoneNumberTokenRequestResendDelay), resendDelay.Value.Humanize(culture: CultureInfo.CurrentUICulture)]).WithExtensionData("TryAgainIn", resendDelay);
+            throw new TooManyRequestsException(Localizer[nameof(AppStrings.WaitForPhoneNumberTokenRequestResendDelay), resendDelay.Value.Humanize(culture: CultureInfo.CurrentUICulture)]).WithExtensionData("TryAgainIn", resendDelay);
 
         user.PhoneNumberTokenRequestedOn = DateTimeOffset.Now;
         var result = await userManager.UpdateAsync(user);
@@ -379,7 +392,7 @@ public partial class UserController : AppControllerBase, IUserController
         // Elevated access token claim gets added to access token upon refresh token request call, so their lifetime would be the same
 
         if (resendDelay < TimeSpan.Zero)
-            throw new TooManyRequestsExceptions(Localizer[nameof(AppStrings.WaitForElevatedAccessTokenRequestResendDelay), resendDelay.Value.Humanize(culture: CultureInfo.CurrentUICulture)]).WithExtensionData("TryAgainIn", resendDelay);
+            throw new TooManyRequestsException(Localizer[nameof(AppStrings.WaitForElevatedAccessTokenRequestResendDelay), resendDelay.Value.Humanize(culture: CultureInfo.CurrentUICulture)]).WithExtensionData("TryAgainIn", resendDelay);
 
         user.ElevatedAccessTokenRequestedOn = DateTimeOffset.Now;
         var result = await userManager.UpdateAsync(user);
@@ -416,7 +429,7 @@ public partial class UserController : AppControllerBase, IUserController
                 .Where(us => us.NotificationStatus == UserSessionNotificationStatus.Allowed && us.UserId == user.Id && us.Id != currentUserSessionId && us.SignalRConnectionId != null)
                 .Select(us => us.SignalRConnectionId!)
                 .ToArrayAsync(cancellationToken);
-            sendMessagesTasks.Add(appHubContext.Clients.Clients(userSessionIdsExceptCurrentUserSessionId).SendAsync(SignalREvents.SHOW_MESSAGE, message, cancellationToken));
+            sendMessagesTasks.Add(appHubContext.Clients.Clients(userSessionIdsExceptCurrentUserSessionId).SendAsync(SignalREvents.SHOW_MESSAGE, message, null, cancellationToken));
             //#endif
 
             //#if (notification == true)
@@ -449,7 +462,7 @@ public partial class UserController : AppControllerBase, IUserController
             //#if (signalR == true)
             if (userSession.SignalRConnectionId != null)
             {
-                await appHubContext.Clients.Client(userSession.SignalRConnectionId).SendAsync(SignalREvents.SHOW_MESSAGE, (string)Localizer[nameof(AppStrings.TestNotificationMessage2)], cancellationToken);
+                await appHubContext.Clients.Client(userSession.SignalRConnectionId).SendAsync(SignalREvents.SHOW_MESSAGE, (string)Localizer[nameof(AppStrings.TestNotificationMessage2)], null, cancellationToken);
             }
             //#endif
         }

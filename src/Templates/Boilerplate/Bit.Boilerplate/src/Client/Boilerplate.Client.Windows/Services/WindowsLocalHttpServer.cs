@@ -8,10 +8,9 @@ using Microsoft.AspNetCore.Components.Web;
 
 namespace Boilerplate.Client.Windows.Services;
 
-// Checkout HybridAppWebInterop.razor's comments.
+// Checkout Client.web/wwwroot/web-interop-app.html's comments.
 public partial class WindowsLocalHttpServer : ILocalHttpServer
 {
-    [AutoInject] private HtmlRenderer htmlRenderer;
     [AutoInject] private PubSubService pubSubService;
     [AutoInject] private IExceptionHandler exceptionHandler;
     [AutoInject] private ClientWindowsSettings clientWindowsSettings;
@@ -111,24 +110,17 @@ public partial class WindowsLocalHttpServer : ILocalHttpServer
 
                 await GoBackToApp();
             }))
-            .WithModule(new ActionModule("/hybrid-app-web-interop", HttpVerbs.Get, async ctx =>
-            {
-                var html = await htmlRenderer.Dispatcher.InvokeAsync(async () =>
-                    (await htmlRenderer.RenderComponentAsync<HybridAppWebInterop>()).ToHtmlString());
-
-                await ctx.SendStringAsync(html, "text/html", Encoding.UTF8);
-            }))
             .OnAny(async ctx =>
             {
-                var ctxImpl = (IHttpContextImpl)ctx;
-                var requestFilePath = ctxImpl.Request.Url.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                var ctxImplementation = (IHttpContextImpl)ctx;
+                var requestFilePath = ctxImplementation.Request.Url.LocalPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
                 var staticFile = staticFiles.FirstOrDefault(f => f.EndsWith(requestFilePath, StringComparison.OrdinalIgnoreCase));
                 if (File.Exists(staticFile) is false)
                 {
                     // In development, Blazor employs complex methods to locate files across all installed NuGet packages.
                     // To streamline this, we utilize a web server to serve static files in the development environment.
                     // In production, as all files are deployed to a single folder, we rely on the default file provider.
-                    if (AppEnvironment.IsDev())
+                    if (AppEnvironment.IsDevelopment())
                     {
                         ctx.Redirect(new Uri(clientWindowsSettings.WebAppUrl ?? absoluteServerAddressProvider.GetAddress(), requestFilePath).ToString());
                     }

@@ -16,10 +16,10 @@ public partial class ProductConfiguration : IEntityTypeConfiguration<Product>
         //#if (database == "PostgreSQL" || database == "SqlServer")
         builder.Property(p => p.ShortId).UseSequence("ProductShortId");
         //#endif
-        //#if (database == "PostgreSQL")
-        if (AppDbContext.EmbeddingIsEnabled)
+        //#if (database == "PostgreSQL" || database == "SqlServer")
+        if (AppDbContext.IsEmbeddingEnabled)
         {
-            builder.Property(p => p.Embedding).HasColumnType("vector(1536)"); // 1536 for text-embedding-3-small
+            builder.Property(p => p.Embedding).HasColumnType("vector(768)"); // Checkout appsettings.json's AI:EmbeddingOptions:Dimensions
         }
         else
         {

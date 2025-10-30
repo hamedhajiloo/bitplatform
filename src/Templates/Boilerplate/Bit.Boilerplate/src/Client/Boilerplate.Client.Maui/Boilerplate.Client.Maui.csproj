@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
-        <TargetFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst</TargetFrameworks>
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net9.0-windows10.0.19041.0</TargetFrameworks>
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net9.0-android</TargetFrameworks>
+        <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net10.0-android</TargetFrameworks>
         <!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
-        <!-- <TargetFrameworks>$(TargetFrameworks);net9.0-tizen</TargetFrameworks> -->
+        <!-- <TargetFrameworks>$(TargetFrameworks);net10.0-tizen</TargetFrameworks> -->
         <OutputType>Exe</OutputType>
         <UseMaui>true</UseMaui>
         <SingleProject>true</SingleProject>
@@ -16,10 +16,6 @@
 
         <!-- App Identifier -->
         <ApplicationId>com.bitplatform.template</ApplicationId>
-
-        <!-- Versions -->
-        <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
-        <ApplicationVersion>1</ApplicationVersion>
 
         <!-- Required for C# Hot Reload -->
         <UseInterpreter Condition="'$(Environment)' == 'Development'">True</UseInterpreter>
@@ -39,30 +35,53 @@
         While this is beneficial for Blazor WebAssembly, it only adds to the app bundle size in MAUI without offering any advantages. -->
     </PropertyGroup>
 
+    <PropertyGroup>
+        <!-- Android requires a unique, increasing integer for `versionCode`. We derive it from Version (e.g., '1.0' or '1.0.0') by extracting major, minor, and patch numbers, setting patch to 0 if absent, and calculating versionCode as major*10000 + minor*100 + patch (e.g., '1.0' becomes 10000, '1.0.1' becomes 10001). -->
+        <_MajorVersionString>$([System.Text.RegularExpressions.Regex]::Match($(Version), '^(\d+)').Groups[1].Value)</_MajorVersionString>
+        <_MinorVersionString>$([System.Text.RegularExpressions.Regex]::Match($(Version), '^\d+\.(\d+)').Groups[1].Value)</_MinorVersionString>
+        <_PatchVersionString>$([System.Text.RegularExpressions.Regex]::Match($(Version), '^\d+\.\d+\.(\d+)$').Groups[1].Value)</_PatchVersionString>
+
+        <MajorVersion>$([System.Int32]::Parse($(_MajorVersionString)))</MajorVersion>
+        <MinorVersion>$([System.Int32]::Parse($(_MinorVersionString)))</MinorVersion>
+
+        <_PatchVersionString Condition="'$(_PatchVersionString)' == ''">0</_PatchVersionString>
+        <PatchVersion>$([System.Int32]::Parse($(_PatchVersionString)))</PatchVersion>
+
+        <ApplicationVersion>
+            $([MSBuild]::Add(
+                $([MSBuild]::Add(
+                    $([MSBuild]::Multiply($(MajorVersion), 10000)),
+                    $([MSBuild]::Multiply($(MinorVersion), 100))
+                )),
+                $(PatchVersion)
+            ))
+        </ApplicationVersion>
+        <ApplicationVersion>$(ApplicationVersion.Trim())</ApplicationVersion>
+    </PropertyGroup>
+
     <PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Environment)' != 'Development'">
-        <EnableLLVM>true</EnableLLVM>
-        <RuntimeIdentifiers Condition="'$(AndroidPackageFormat)' == 'apk'">android-arm64</RuntimeIdentifiers>
+        <AndroidLinkTool>r8</AndroidLinkTool>
+        <AndroidUseAapt2>True</AndroidUseAapt2>
+        <RunAOTCompilation>True</RunAOTCompilation>
+        <AndroidStripILAfterAOT>true</AndroidStripILAfterAOT>
+        <AndroidEnableProfiledAot>true</AndroidEnableProfiledAot>
         <MauiUseDefaultAotProfile Condition="Exists('custom.aprof')">false</MauiUseDefaultAotProfile>
-        <!--/+:msbuild-conditional:noEmit -->
-        <AndroidStripILAfterAOT Condition=" '$(offlineDb)' == 'false'">true</AndroidStripILAfterAOT>
-        <RunAOTCompilation Condition=" '$(offlineDb)' == 'true' OR '$(offlineDb)' == ''">false</RunAOTCompilation>
-        <!--/-:msbuild-conditional:noEmit -->
+        <RuntimeIdentifiers Condition="'$(AndroidPackageFormat)' == 'apk'">android-arm64</RuntimeIdentifiers>
+
+        <EnableLLVM>false</EnableLLVM>
+        <!-- https://github.com/dotnet/runtime/issues/95406#issuecomment-1983736335 -->
     </PropertyGroup>
 
     <PropertyGroup Condition="$(TargetFramework.Contains('-ios')) and '$(Environment)' == 'Development'">
-        <CodesignEntitlements>Platforms/iOS/Entitlements.Development.plist</CodesignEntitlements>
         <EnableSGenConc>True</EnableSGenConc>
+        <CodesignEntitlements>Platforms/iOS/Entitlements.Development.plist</CodesignEntitlements>
     </PropertyGroup>
 
     <PropertyGroup Condition="$(TargetFramework.Contains('-ios')) and '$(Environment)' != 'Development'">
-        <CodesignEntitlements>Platforms/iOS/Entitlements.Production.plist</CodesignEntitlements>
         <EnableSGenConc>True</EnableSGenConc>
-        <!--/+:msbuild-conditional:noEmit -->
         <!-- https://learn.microsoft.com/en-us/dotnet/maui/macios/interpreter -->
-        <MtouchInterpreter Condition=" '$(offlineDb)' == 'false'">-all</MtouchInterpreter>
-        <UseInterpreter Condition=" '$(offlineDb)' == 'true' OR '$(offlineDb)' == ''">True</UseInterpreter>
-        <PublishAot Condition=" '$(offlineDb)' == 'true' OR '$(offlineDb)' == ''">false</PublishAot>
-        <!--/-:msbuild-conditional:noEmit -->
+        <MtouchInterpreter>-all</MtouchInterpreter>
+        <CodesignEntitlements>Platforms/iOS/Entitlements.Production.plist</CodesignEntitlements>
     </PropertyGroup>
 
     <!-- Build Properties must be defined within these property groups to ensure successful publishing
@@ -74,11 +93,8 @@
     <PropertyGroup Condition="$(TargetFramework.Contains('-maccatalyst')) and '$(Environment)' != 'Development'">
         <CodesignEntitlements>Platforms/MacCatalyst/Entitlements.Production.plist</CodesignEntitlements>
         <UseHardenedRuntime>true</UseHardenedRuntime>
-        <!--/+:msbuild-conditional:noEmit -->
-        <MtouchInterpreter Condition=" '$(offlineDb)' == 'false'">-all</MtouchInterpreter>
-        <UseInterpreter Condition=" '$(offlineDb)' == 'true' OR '$(offlineDb)' == ''">True</UseInterpreter>
-        <PublishAot Condition=" '$(offlineDb)' == 'true' OR '$(offlineDb)' == ''">false</PublishAot>
-        <!--/-:msbuild-conditional:noEmit -->
+        <!-- https://learn.microsoft.com/en-us/dotnet/maui/macios/interpreter -->
+        <MtouchInterpreter>-all</MtouchInterpreter>
     </PropertyGroup>
 
     <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
@@ -87,24 +103,13 @@
         <AndroidAotProfile Condition="Exists('custom.aprof')" Include="custom.aprof" />
         <!--/+:msbuild-conditional:noEmit -->
         <PackageReference Condition=" '$(notification)' == 'true' OR '$(notification)' == ''" Include="Xamarin.Firebase.Messaging" />
-        <PackageReference Include="Xamarin.AndroidX.Collection" />
-        <PackageReference Include="Xamarin.AndroidX.Collection.Ktx" />
-        <PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel" />
-        <PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModel.Ktx" />
-        <PackageReference Include="Xamarin.AndroidX.Lifecycle.ViewModelSavedState" />
-        <PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime" />
-        <PackageReference Include="Xamarin.AndroidX.Lifecycle.Runtime.Ktx" />
-        <PackageReference Include="Xamarin.AndroidX.Activity" />
-        <PackageReference Include="Xamarin.AndroidX.Activity.Ktx" />
-        <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData" />
-        <PackageReference Include="Xamarin.AndroidX.Lifecycle.LiveData.Core.Ktx" />
-        <PackageReference Include="Xamarin.GooglePlayServices.Basement" />
-        <PackageReference Include="Xamarin.Google.Android.Play.Review.Ktx" />
+        <PackageReference Condition=" '$(notification)' == 'true' OR '$(notification)' == ''" Include="Xamarin.AndroidX.SavedState" />
+        <PackageReference Condition=" '$(notification)' == 'true' OR '$(notification)' == ''" Include="Xamarin.AndroidX.SavedState.SavedState.Ktx" />
         <!--/-:msbuild-conditional:noEmit -->
         <!-- Run the following commands to create custom.aprof file which improves the Android app performance -->
         <!-- dotnet add package Mono.AotProfiler.Android -->
-        <!-- dotnet build -t:BuildAndStartAotProfiling -f net9.0-android -p:UseInterpreter=false -->
-        <!-- dotnet build -t:FinishAotProfiling -f net9.0-android -->
+        <!-- dotnet build -t:BuildAndStartAotProfiling -f net10.0-android -p:UseInterpreter=false -->
+        <!-- dotnet build -t:FinishAotProfiling -f net10.0-android -->
         <!-- dotnet remove package Mono.AotProfiler.Android -->
     </ItemGroup>
 
@@ -114,6 +119,10 @@
 
     <ItemGroup>
 
+        <Content Include="..\Boilerplate.Client.Web\wwwroot\web-interop-app.html" Link="wwwroot\web-interop-app.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        
         <Using Include="Microsoft.AspNetCore.Components.WebView.Maui" />
         <Using Include="Boilerplate.Client.Core.Components.Layout" />
         <Using Include="Boilerplate.Client.Core.Components.Pages" />
@@ -154,13 +163,14 @@
 
     <ItemGroup>
         <PackageReference Include="EmbedIO" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+        <PackageReference Include="Bit.BlazorES2019" />
         <PackageReference Include="Microsoft.Maui.Controls" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" />
         <PackageReference Include="Microsoft.Extensions.Logging.EventLog" />
         <PackageReference Include="Microsoft.Extensions.Logging.EventSource" />
         <!--/+:msbuild-conditional:noEmit -->
         <PackageReference Condition="'$(module)' == 'Admin' OR '$(module)' == ''" Include="Newtonsoft.Json" />
+        <PackageReference Include="Oscore.Maui.AppStoreInfo" />
         <PackageReference Include="Plugin.Maui.AppRating" />
         <PackageReference Condition=" '$(sentry)' == 'true' OR '$(sentry)' == '' " Include="Sentry.Maui" />
         <PackageReference Condition=" '$(appInsights)' == 'true' OR '$(appInsights)' == '' " Include="Microsoft.Extensions.Logging.ApplicationInsights" />

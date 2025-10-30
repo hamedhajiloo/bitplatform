@@ -1,4 +1,4 @@
-// bit version: 9.8.0
+// bit version: 10.0.0-pre-05
 // https://github.com/bitfoundation/bitplatform/tree/develop/src/Bswup
 
 self.assetsInclude = [];
@@ -11,6 +11,9 @@ self.assetsExclude = [
 self.externalAssets = [
     {
         "url": "Bit.BlazorUI.Demo.Server.styles.css"
+    },
+    {
+        url: "_framework/bit.blazor.web.es2019.js"
     }
 ];
 
@@ -20,7 +23,9 @@ self.serverHandledUrls = [
     /\/api.fda.gov/
 ];
 
-self.prerenderMode = 'always';
+self.enableCacheControl = false;
+
+self.mode = 'AlwaysPrerender';
 self.enableIntegrityCheck = false;
 
 self.importScripts('_content/Bit.Bswup/bit-bswup.sw.js');

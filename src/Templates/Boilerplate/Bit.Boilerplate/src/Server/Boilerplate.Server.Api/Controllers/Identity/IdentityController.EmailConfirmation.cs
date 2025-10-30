@@ -1,4 +1,4 @@
-//+:cnd:noEmit
+﻿//+:cnd:noEmit
 using Humanizer;
 using Boilerplate.Shared.Dtos.Identity;
 using Boilerplate.Server.Api.Models.Identity;
@@ -60,18 +60,18 @@ public partial class IdentityController
 
         var token = await userManager.GenerateUserTokenAsync(user, TokenOptions.DefaultPhoneProvider, FormattableString.Invariant($"Otp_Email,{user.OtpRequestedOn?.ToUniversalTime()}"));
 
-        await SignIn(new() { Email = request.Email, Otp = token, DeviceInfo = request.DeviceInfo }, cancellationToken);
+        await SignIn(new() { Email = request.Email, Otp = token }, cancellationToken);
     }
 
 
     private async Task SendConfirmEmailToken(User user, string? returnUrl, CancellationToken cancellationToken)
     {
-        returnUrl ??= Urls.HomePage;
+        returnUrl ??= PageUrls.Home;
 
         var resendDelay = (DateTimeOffset.Now - user.EmailTokenRequestedOn) - AppSettings.Identity.EmailTokenLifetime;
 
         if (resendDelay < TimeSpan.Zero)
-            throw new TooManyRequestsExceptions(Localizer[nameof(AppStrings.WaitForEmailTokenRequestResendDelay), resendDelay.Value.Humanize(culture: CultureInfo.CurrentUICulture)]).WithData("UserId", user.Id).WithExtensionData("TryAgainIn", resendDelay);
+            throw new TooManyRequestsException(Localizer[nameof(AppStrings.WaitForEmailTokenRequestResendDelay), resendDelay.Value.Humanize(culture: CultureInfo.CurrentUICulture)]).WithData("UserId", user.Id).WithExtensionData("TryAgainIn", resendDelay);
 
         user.EmailTokenRequestedOn = DateTimeOffset.Now;
         var result = await userManager.UpdateAsync(user);
@@ -81,7 +81,7 @@ public partial class IdentityController
 
         var email = user.Email!;
         var token = await userManager.GenerateUserTokenAsync(user, TokenOptions.DefaultPhoneProvider, FormattableString.Invariant($"VerifyEmail:{email},{user.EmailTokenRequestedOn?.ToUniversalTime()}"));
-        var link = new Uri(HttpContext.Request.GetWebAppUrl(), $"{Urls.ConfirmPage}?email={Uri.EscapeDataString(email)}&emailToken={Uri.EscapeDataString(token)}&culture={CultureInfo.CurrentUICulture.Name}&return-url={Uri.EscapeDataString(returnUrl)}");
+        var link = new Uri(HttpContext.Request.GetWebAppUrl(), $"{PageUrls.Confirm}?email={Uri.EscapeDataString(email)}&emailToken={Uri.EscapeDataString(token)}&culture={CultureInfo.CurrentUICulture.Name}&return-url={Uri.EscapeDataString(returnUrl)}");
 
         await emailService.SendEmailToken(user, email, token, link, cancellationToken);
     }

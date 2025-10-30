@@ -71,21 +71,7 @@ public partial class Program
         {
             try
             {
-                var windowsUpdateSettings = Services.GetRequiredService<ClientWindowsSettings>().WindowsUpdate;
-                if (string.IsNullOrEmpty(windowsUpdateSettings?.FilesUrl))
-                {
-                    return;
-                }
-                var updateManager = new UpdateManager(windowsUpdateSettings.FilesUrl);
-                var updateInfo = await updateManager.CheckForUpdatesAsync();
-                if (updateInfo is not null)
-                {
-                    await updateManager.DownloadUpdatesAsync(updateInfo);
-                    if (windowsUpdateSettings.AutoReload)
-                    {
-                        updateManager.ApplyUpdatesAndRestart(updateInfo, args);
-                    }
-                }
+                await ((WindowsAppUpdateService)Services.GetRequiredService<IAppUpdateService>()).Update();
             }
             catch (Exception exp)
             {
@@ -119,7 +105,7 @@ public partial class Program
                 args.State = CoreWebView2PermissionState.Allow;
             };
             var settings = blazorWebView.WebView.CoreWebView2.Settings;
-            if (AppEnvironment.IsDev() is false)
+            if (AppEnvironment.IsDevelopment() is false)
             {
                 settings.IsZoomControlEnabled = false;
                 settings.AreBrowserAcceleratorKeysEnabled = false;
@@ -147,7 +133,7 @@ public partial class Program
             Services.GetRequiredService<IExceptionHandler>().Handle(exp, parameters: new()
             {
                 { nameof(reportedBy), reportedBy }
-            }, displayKind: AppEnvironment.IsDev() ? ExceptionDisplayKind.NonInterrupting : ExceptionDisplayKind.None);
+            }, displayKind: AppEnvironment.IsDevelopment() ? ExceptionDisplayKind.NonInterrupting : ExceptionDisplayKind.None);
         }
         else
         {

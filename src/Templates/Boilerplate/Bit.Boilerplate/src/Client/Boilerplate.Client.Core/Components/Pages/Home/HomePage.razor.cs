@@ -6,7 +6,7 @@ namespace Boilerplate.Client.Core.Components.Pages.Home;
 
 public partial class HomePage
 {
-    [CascadingParameter] private BitDir? currentDir { get; set; }
+    [CascadingParameter] public BitDir? CurrentDir { get; set; }
 
 
     //#if(module != "Sales")
@@ -15,11 +15,10 @@ public partial class HomePage
     private bool isLoadingNuget = true;
     private bool isLoadingGitHub = true;
 
+
     [AutoInject] private IStatisticsController statisticsController = default!;
-    //#endif
+    
 
-
-    //#if(module != "Sales")
     protected override async Task OnInitAsync()
     {
         await base.OnInitAsync();
@@ -35,9 +34,8 @@ public partial class HomePage
 
         await Task.WhenAll(LoadNuget(), LoadGitHub());
     }
-    //#endif
+    
 
-    //#if(module != "Sales")
     private async Task LoadNuget()
     {
         try
@@ -74,7 +72,6 @@ public partial class HomePage
         }
     }
     //#endif
-
     //#if(module == "Sales")
     private async Task HandleOnSearchBoxClick()
     {

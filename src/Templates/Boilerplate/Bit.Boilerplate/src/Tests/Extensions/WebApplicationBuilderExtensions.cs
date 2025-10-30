@@ -1,7 +1,9 @@
-//+:cnd:noEmit
+﻿//+:cnd:noEmit
+using Hangfire;
 using Boilerplate.Server.Web;
 using Boilerplate.Tests.Services;
 using Boilerplate.Server.Api.Services;
+using Boilerplate.Client.Core.Services.HttpMessageHandlers;
 
 namespace Microsoft.AspNetCore.Builder;
 
@@ -13,16 +15,12 @@ public static partial class WebApplicationBuilderExtensions
 
         builder.AddServerWebProjectServices();
 
-        //#if (advancedTests == true)
-        services.AddTransient<PhoneService, FakePhoneService>();
-        //#if (captcha == "reCaptcha")
-        services.AddTransient<GoogleRecaptchaService, FakeGoogleRecaptchaService>();
-        //#endif
-        //#endif
+        // Register test-specific services for all tests here
 
-        services.AddTransient(sp =>
+        services.AddTransient<HttpClient>(sp =>
         {
-            return new HttpClient(sp.GetRequiredService<HttpMessageHandler>())
+            var handlerFactory = sp.GetRequiredService<HttpMessageHandlersChainFactory>();
+            return new HttpClient(handlerFactory.Invoke())
             {
                 BaseAddress = new Uri(sp.GetRequiredService<IConfiguration>().GetServerAddress(), UriKind.Absolute)
             };

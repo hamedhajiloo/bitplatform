@@ -4,13 +4,34 @@ public partial class BitMarkdownViewerDemo
 {
     private readonly List<ComponentParameter> componentParameters =
     [
-         new()
-         {
-            Name = "Markdown",
-            Type = "string?",
-            DefaultValue = "null",
-            Description = "The Markdown string value to render as an html element.",
-         },
+        new()
+        {
+           Name = "Markdown",
+           Type = "string?",
+           DefaultValue = "null",
+           Description = "The Markdown string value to render as an html element.",
+        },
+        new()
+        {
+           Name = "OnParsing",
+           Type = "EventCallback<string?>",
+           DefaultValue = "null",
+           Description = "A callback that is called before starting to parse the markdown.",
+        },
+        new()
+        {
+           Name = "OnParsed",
+           Type = "EventCallback<string?>",
+           DefaultValue = "null",
+           Description = "A callback that is called after parsing the markdown.",
+        },
+        new()
+        {
+           Name = "OnRendered",
+           Type = "EventCallback<string?>",
+           DefaultValue = "null",
+           Description = "A callback that is called after rendering the parsed markdown.",
+        },
     ];
 
 
@@ -22,7 +43,7 @@ public partial class BitMarkdownViewerDemo
 ![License](https://img.shields.io/github/license/bitfoundation/bitplatform.svg)
 ![CI Status](https://github.com/bitfoundation/bitplatform/actions/workflows/bit.ci.yml/badge.svg)
 ![NuGet version](https://img.shields.io/nuget/v/bit.blazorui.svg?logo=nuget)
-[![Nuget downloads](https://img.shields.io/badge/packages_download-6.5M-blue.svg?logo=nuget)](https://www.nuget.org/profiles/bit-foundation)
+[![Nuget downloads](https://img.shields.io/badge/packages_download-7.9M-blue.svg?logo=nuget)](https://www.nuget.org/profiles/bit-foundation)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/bitfoundation/bitplatform.svg)](http://isitmaintained.com/project/bitfoundation/bitplatform ""Average time to resolve an issue"")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/bitfoundation/bitplatform.svg)](http://isitmaintained.com/project/bitfoundation/bitplatform ""Percentage of issues still open"")
 
@@ -90,10 +111,29 @@ We welcome contributions! Many people all over the world have helped make this p
 
 ![Alt](https://repobeats.axiom.co/api/embed/66dc1fc04ed967094b98ac118e8f18fa38b19f6a.svg ""bit platform open source contributions report"")";
 
+    private DateTimeOffset? parsingDateTime;
+    private DateTimeOffset? parsedDateTime;
+    private DateTimeOffset? renderedDateTime;
+
+    private void OnParsing(string? markdown)
+    {
+        parsingDateTime = DateTimeOffset.Now;
+    }
+
+    private void OnParsed(string? html)
+    {
+        parsedDateTime = DateTimeOffset.Now;
+    }
+
+    private void OnRendered(string? html)
+    {
+        renderedDateTime = DateTimeOffset.Now;
+    }
+
 
 
     private readonly string example1RazorCode = @"
-<BitMarkdownViewer Markdown=""@(""# Marked in the browser\n\nRendered by **marked**."")"" />";
+<BitMarkdownViewer Markdown=""@(""# Marked in the browser\n\nRendered by [**marked**](https://marked.js.org)."")"" />";
 
     private readonly string example2RazorCode = @"
 <style>
@@ -112,7 +152,7 @@ private string advancedMarkdown = @""![Header](https://user-images.githubusercon
 ![License](https://img.shields.io/github/license/bitfoundation/bitplatform.svg)
 ![CI Status](https://github.com/bitfoundation/bitplatform/actions/workflows/bit.ci.yml/badge.svg)
 ![NuGet version](https://img.shields.io/nuget/v/bit.blazorui.svg?logo=nuget)
-[![Nuget downloads](https://img.shields.io/badge/packages_download-6.5M-blue.svg?logo=nuget)](https://www.nuget.org/profiles/bit-foundation)
+[![Nuget downloads](https://img.shields.io/badge/packages_download-7.9M-blue.svg?logo=nuget)](https://www.nuget.org/profiles/bit-foundation)
 [![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/bitfoundation/bitplatform.svg)](http://isitmaintained.com/project/bitfoundation/bitplatform """"Average time to resolve an issue"""")
 [![Percentage of issues still open](http://isitmaintained.com/badge/open/bitfoundation/bitplatform.svg)](http://isitmaintained.com/project/bitfoundation/bitplatform """"Percentage of issues still open"""")
 
@@ -179,4 +219,34 @@ We welcome contributions! Many people all over the world have helped make this p
 # **Contributions**
 
 ![Alt](https://repobeats.axiom.co/api/embed/66dc1fc04ed967094b98ac118e8f18fa38b19f6a.svg """"bit platform open source contributions report"""")"";";
+
+    private readonly string example3RazorCode = @"
+<BitMarkdownViewer Markdown=""@(""# Events of the BitMarkdownViewer:\n\n- OnParsing\n- OnParsed\n- OnRendered"")""
+                   Id=""test-mdv""
+                   OnParsing=""OnParsing""
+                   OnParsed=""OnParsed""
+                   OnRendered=""OnRendered"" />
+<hr />
+<div>Parsing at [@parsingDateTime?.ToString(""o"")]</div>
+<div>Parsed at [@parsedDateTime?.ToString(""o"")]</div>
+<div>Rendered at [@renderedDateTime?.ToString(""o"")]</div>";
+    private readonly string example3CsharpCode = @"
+private DateTimeOffset? parsingDateTime;
+private DateTimeOffset? parsedDateTime;
+private DateTimeOffset? renderedDateTime;
+
+private void OnParsing(string? markdown)
+{
+    parsingDateTime = DateTimeOffset.Now;
+}
+
+private void OnParsed(string? html)
+{
+    parsedDateTime = DateTimeOffset.Now;
+}
+
+private void OnRendered(string? html)
+{
+    renderedDateTime = DateTimeOffset.Now;
+}";
 }

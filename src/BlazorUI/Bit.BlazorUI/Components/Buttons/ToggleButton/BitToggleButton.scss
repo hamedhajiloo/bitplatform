@@ -7,7 +7,6 @@
     align-items: center;
     display: inline-flex;
     text-decoration: none;
-
     box-sizing: border-box;
     justify-content: center;
     font-family: $tg-font-family;
@@ -15,18 +14,20 @@
     border-width: $shp-border-width;
     border-style: $shp-border-style;
     border-radius: $shp-border-radius;
+    font-size: var(--bit-tgb-fontsize);
+    --bit-tgb-icn-margin: #{spacing(0.5)};
 
     &.bit-dis {
         cursor: default;
-        pointer-events: none;
         color: $clr-fg-dis;
+        pointer-events: none;
     }
 }
 
 .bit-tgb-ico {
     flex-shrink: 0;
     text-align: center;
-    margin: 0 spacing(0.5);
+    margin-inline-end: var(--bit-tgb-icn-margin);
 }
 
 .bit-tgb-btx {
@@ -203,9 +204,9 @@
     --bit-tgb-clr: #{$clr-bg-pri};
     --bit-tgb-clr-hover: #{$clr-bg-pri-hover};
     --bit-tgb-clr-active: #{$clr-bg-pri-active};
-    --bit-tgb-clr-dark: #{$clr-bg-pri};
-    --bit-tgb-clr-dark-hover: #{$clr-bg-pri-hover};
-    --bit-tgb-clr-dark-active: #{$clr-bg-pri-active};
+    --bit-tgb-clr-dark: #{$clr-bg-pri-dark};
+    --bit-tgb-clr-dark-hover: #{$clr-bg-pri-dark-hover};
+    --bit-tgb-clr-dark-active: #{$clr-bg-pri-dark-active};
 }
 
 .bit-tgb-sbg {
@@ -213,9 +214,9 @@
     --bit-tgb-clr: #{$clr-bg-sec};
     --bit-tgb-clr-hover: #{$clr-bg-sec-hover};
     --bit-tgb-clr-active: #{$clr-bg-sec-active};
-    --bit-tgb-clr-dark: #{$clr-bg-sec};
-    --bit-tgb-clr-dark-hover: #{$clr-bg-sec-hover};
-    --bit-tgb-clr-dark-active: #{$clr-bg-sec-active};
+    --bit-tgb-clr-dark: #{$clr-bg-sec-dark};
+    --bit-tgb-clr-dark-hover: #{$clr-bg-sec-dark-hover};
+    --bit-tgb-clr-dark-active: #{$clr-bg-sec-dark-active};
 }
 
 .bit-tgb-tbg {
@@ -223,9 +224,9 @@
     --bit-tgb-clr: #{$clr-bg-ter};
     --bit-tgb-clr-hover: #{$clr-bg-ter-hover};
     --bit-tgb-clr-active: #{$clr-bg-ter-active};
-    --bit-tgb-clr-dark: #{$clr-bg-ter};
-    --bit-tgb-clr-dark-hover: #{$clr-bg-ter-hover};
-    --bit-tgb-clr-dark-active: #{$clr-bg-ter-active};
+    --bit-tgb-clr-dark: #{$clr-bg-ter-dark};
+    --bit-tgb-clr-dark-hover: #{$clr-bg-ter-dark-hover};
+    --bit-tgb-clr-dark-active: #{$clr-bg-ter-dark-active};
 }
 
 .bit-tgb-pfg {
@@ -233,9 +234,9 @@
     --bit-tgb-clr: #{$clr-fg-pri};
     --bit-tgb-clr-hover: #{$clr-fg-pri-hover};
     --bit-tgb-clr-active: #{$clr-fg-pri-active};
-    --bit-tgb-clr-dark: #{$clr-fg-pri};
-    --bit-tgb-clr-dark-hover: #{$clr-fg-pri-hover};
-    --bit-tgb-clr-dark-active: #{$clr-fg-pri-active};
+    --bit-tgb-clr-dark: #{$clr-fg-pri-dark};
+    --bit-tgb-clr-dark-hover: #{$clr-fg-pri-dark-hover};
+    --bit-tgb-clr-dark-active: #{$clr-fg-pri-dark-active};
 }
 
 .bit-tgb-sfg {
@@ -243,9 +244,9 @@
     --bit-tgb-clr: #{$clr-fg-sec};
     --bit-tgb-clr-hover: #{$clr-fg-sec-hover};
     --bit-tgb-clr-active: #{$clr-fg-sec-active};
-    --bit-tgb-clr-dark: #{$clr-fg-sec};
-    --bit-tgb-clr-dark-hover: #{$clr-fg-sec-hover};
-    --bit-tgb-clr-dark-active: #{$clr-fg-sec-active};
+    --bit-tgb-clr-dark: #{$clr-fg-sec-dark};
+    --bit-tgb-clr-dark-hover: #{$clr-fg-sec-dark-hover};
+    --bit-tgb-clr-dark-active: #{$clr-fg-sec-dark-active};
 }
 
 .bit-tgb-tfg {
@@ -253,9 +254,9 @@
     --bit-tgb-clr: #{$clr-fg-ter};
     --bit-tgb-clr-hover: #{$clr-fg-ter-hover};
     --bit-tgb-clr-active: #{$clr-fg-ter-active};
-    --bit-tgb-clr-dark: #{$clr-fg-ter};
-    --bit-tgb-clr-dark-hover: #{$clr-fg-ter-hover};
-    --bit-tgb-clr-dark-active: #{$clr-fg-ter-active};
+    --bit-tgb-clr-dark: #{$clr-fg-ter-dark};
+    --bit-tgb-clr-dark-hover: #{$clr-fg-ter-dark-hover};
+    --bit-tgb-clr-dark-active: #{$clr-fg-ter-dark-active};
 }
 
 .bit-tgb-pbr {
@@ -263,9 +264,9 @@
     --bit-tgb-clr: #{$clr-brd-pri};
     --bit-tgb-clr-hover: #{$clr-brd-pri-hover};
     --bit-tgb-clr-active: #{$clr-brd-pri-active};
-    --bit-tgb-clr-dark: #{$clr-brd-pri};
-    --bit-tgb-clr-dark-hover: #{$clr-brd-pri-hover};
-    --bit-tgb-clr-dark-active: #{$clr-brd-pri-active};
+    --bit-tgb-clr-dark: #{$clr-brd-pri-dark};
+    --bit-tgb-clr-dark-hover: #{$clr-brd-pri-dark-hover};
+    --bit-tgb-clr-dark-active: #{$clr-brd-pri-dark-active};
 }
 
 .bit-tgb-sbr {
@@ -273,9 +274,9 @@
     --bit-tgb-clr: #{$clr-brd-sec};
     --bit-tgb-clr-hover: #{$clr-brd-sec-hover};
     --bit-tgb-clr-active: #{$clr-brd-sec-active};
-    --bit-tgb-clr-dark: #{$clr-brd-sec};
-    --bit-tgb-clr-dark-hover: #{$clr-brd-sec-hover};
-    --bit-tgb-clr-dark-active: #{$clr-brd-sec-active};
+    --bit-tgb-clr-dark: #{$clr-brd-sec-dark};
+    --bit-tgb-clr-dark-hover: #{$clr-brd-sec-dark-hover};
+    --bit-tgb-clr-dark-active: #{$clr-brd-sec-dark-active};
 }
 
 .bit-tgb-tbr {
@@ -283,23 +284,43 @@
     --bit-tgb-clr: #{$clr-brd-ter};
     --bit-tgb-clr-hover: #{$clr-brd-ter-hover};
     --bit-tgb-clr-active: #{$clr-brd-ter-active};
-    --bit-tgb-clr-dark: #{$clr-brd-ter};
-    --bit-tgb-clr-dark-hover: #{$clr-brd-ter-hover};
-    --bit-tgb-clr-dark-active: #{$clr-brd-ter-active};
+    --bit-tgb-clr-dark: #{$clr-brd-ter-dark};
+    --bit-tgb-clr-dark-hover: #{$clr-brd-ter-dark-hover};
+    --bit-tgb-clr-dark-active: #{$clr-brd-ter-dark-active};
 }
 
 
 .bit-tgb-sm {
-    font-size: spacing(1.5);
     padding: spacing(0.5) spacing(1.5);
+    --bit-tgb-fontsize: #{spacing(1.5)};
+    --bit-tgb-ntx-pad: #{spacing(0.5)};
+    --bit-tgb-ntx-icn-size: #{spacing(2.00)};
 }
 
 .bit-tgb-md {
-    font-size: spacing(1.75);
     padding: spacing(0.75) spacing(2);
+    --bit-tgb-fontsize: #{spacing(1.75)};
+    --bit-tgb-ntx-pad: #{spacing(0.75)};
+    --bit-tgb-ntx-icn-size: #{spacing(2.35)};
 }
 
 .bit-tgb-lg {
-    font-size: spacing(2);
     padding: spacing(1) spacing(2.5);
+    --bit-tgb-fontsize: #{spacing(2)};
+    --bit-tgb-ntx-pad: #{spacing(1.0)};
+    --bit-tgb-ntx-icn-size: #{spacing(3.35)};
+}
+
+
+
+// important: these need to be here at the end!
+
+.bit-tgb-fxc {
+    color: var(--bit-tgb-clr-txt);
+}
+
+.bit-tgb-ntx {
+    padding: var(--bit-tgb-ntx-pad);
+    --bit-tgb-icn-margin: 0;
+    --bit-tgb-fontsize: var(--bit-tgb-ntx-icn-size);
 }

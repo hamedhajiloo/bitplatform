@@ -1,13 +1,14 @@
-//+:cnd:noEmit
+﻿//+:cnd:noEmit
 using Microsoft.EntityFrameworkCore;
+//#if (aspire == true)
+using Aspire.Hosting;
+using Aspire.Hosting.Testing;
+using Aspire.Hosting.DevTunnels;
+using Aspire.Hosting.ApplicationModel;
+//#endif
 using Boilerplate.Server.Api.Data;
 //#if (database  == 'Sqlite')
 using Microsoft.Data.Sqlite;
-//#endif
-//#if (advancedTests == true)
-using Boilerplate.Tests.PageTests.PageModels.Identity;
-using Boilerplate.Tests.Extensions;
-using Boilerplate.Client.Web;
 //#endif
 using Microsoft.Extensions.Hosting;
 
@@ -16,31 +17,67 @@ namespace Boilerplate.Tests;
 [TestClass]
 public partial class TestsInitializer
 {
-    //#if (advancedTests == true)
-    public static string AuthenticationState { get; private set; } = null!;
+    //#if (aspire == true)
+    private static DistributedApplication? aspireApp;
     //#endif
 
     [AssemblyInitialize]
     public static async Task Initialize(TestContext testContext)
     {
+        //#if (aspire == true)
+        await RunAspireHost(testContext);
+        //#endif
         await using var testServer = new AppTestServer();
 
-        await testServer.Build(
-        //#if (advancedTests == true)
-        configureTestConfigurations: configuration =>
-        {
-            //Run assembly initialization test in BlazorWebAssembly mode to cache .wasm files
-            configuration["WebAppRender:BlazorMode"] = BlazorWebAppMode.BlazorWebAssembly.ToString();
-        }
-        //#endif
-        ).Start();
+        await testServer.Build().Start(testContext.CancellationToken);
 
         await InitializeDatabase(testServer);
-
-        //#if (advancedTests == true)
-        await InitializeAuthenticationState(testServer, testContext);
-        //#endif
     }
+
+    //#if (aspire == true)
+    /// <summary>
+    /// Aspire.Hosting.Testing executes the complete application, including dependencies like databases, 
+    /// closely mimicking a production environment. However, it has a limitation: backend services cannot 
+    /// be overridden in tests if needed, unlike <see cref="AppTestServer"/> used in <see cref="IdentityApiTests"/> 
+    /// and <see cref="IdentityPagesTests"/>. The code below runs the Aspire app without the server web 
+    /// project, retrieves necessary connection strings (e.g., database connection string), and passes 
+    /// them to <see cref="AppTestServer"/>.
+    /// </summary>
+    private static async Task RunAspireHost(TestContext testContext)
+    {
+        var aspireBuilder = await DistributedApplicationTestingBuilder
+            .CreateAsync<Program>(testContext.CancellationToken);
+
+        foreach (var res in aspireBuilder.Resources.OfType<ProjectResource>().ToList())
+            aspireBuilder.Resources.Remove(res);
+        foreach (var res in aspireBuilder.Resources.OfType<DevTunnelResource>().ToList()) // remove unnecessary resources.
+            aspireBuilder.Resources.Remove(res);
+
+        aspireApp = await aspireBuilder.BuildAsync(testContext.CancellationToken);
+
+        await aspireApp.StartAsync(testContext.CancellationToken);
+
+        //#if (database == "SqlServer")
+        Environment.SetEnvironmentVariable("ConnectionStrings__mssqldb", await aspireApp.GetConnectionStringAsync("mssqldb", testContext.CancellationToken));
+        await aspireApp.ResourceNotifications.WaitForResourceAsync("mssqldb", KnownResourceStates.Running, testContext.CancellationToken);
+        //#elif (database == "PostgreSql")
+        Environment.SetEnvironmentVariable("ConnectionStrings__postgresdb", await aspireApp.GetConnectionStringAsync("postgresdb", testContext.CancellationToken));
+        await aspireApp.ResourceNotifications.WaitForResourceAsync("postgresdb", KnownResourceStates.Running, testContext.CancellationToken);
+        //#elif (database == "MySql")
+        Environment.SetEnvironmentVariable("ConnectionStrings__mysqldb", await aspireApp.GetConnectionStringAsync("mysqldb", testContext.CancellationToken));
+        await aspireApp.ResourceNotifications.WaitForResourceAsync("mysqldb", KnownResourceStates.Running, testContext.CancellationToken);
+        //#endif
+        //#if (filesStorage == "AzureBlobStorage")
+        Environment.SetEnvironmentVariable("ConnectionStrings__azureblobstorage", await aspireApp.GetConnectionStringAsync("azureblobstorage", testContext.CancellationToken));
+        await aspireApp.ResourceNotifications.WaitForResourceAsync("azureblobstorage", KnownResourceStates.Running, testContext.CancellationToken);
+        //#elif (filesStorage == "S3")
+        Environment.SetEnvironmentVariable("ConnectionStrings__s3", await aspireApp.GetConnectionStringAsync("s3", testContext.CancellationToken));
+        await aspireApp.ResourceNotifications.WaitForResourceAsync("s3", KnownResourceStates.Running, testContext.CancellationToken);
+        //#endif
+        Environment.SetEnvironmentVariable("ConnectionStrings__smtp", await aspireApp.GetConnectionStringAsync("smtp", testContext.CancellationToken));
+        await aspireApp.ResourceNotifications.WaitForResourceAsync("smtp", KnownResourceStates.Running, testContext.CancellationToken);
+    }
+    //#endif
 
     //#if (database  == 'Sqlite')
     //SQLite database in in-memory mode only lives as long as at least one connection to it is open
@@ -64,46 +101,26 @@ public partial class TestsInitializer
             }
             //#endif
             //#endif
-            await dbContext.Database.MigrateAsync();
+            if ((await dbContext.Database.GetPendingMigrationsAsync()).Any())
+            {
+                await dbContext.Database.MigrateAsync();
+            }
+            else if ((await dbContext.Database.GetAppliedMigrationsAsync()).Any() is false)
+            {
+                throw new InvalidOperationException("No migrations have been added. Please ensure that migrations are added before running tests.");
+            }
         }
     }
 
-    //#if (advancedTests == true)
-    private static async Task InitializeAuthenticationState(AppTestServer testServer, TestContext testContext)
+    //#if (aspire == true)
+    [AssemblyCleanup]
+    public static async Task Cleanup()
     {
-        var playwrightPage = new PageTest() { TestContext = testContext };
-        await playwrightPage.ContextSetup();
-        await playwrightPage.BrowserSetup();
-
-        var currentMethodFullName = $"{typeof(TestsInitializer).FullName}.{(nameof(InitializeAuthenticationState))}";
-        var options = new BrowserNewContextOptions().EnableVideoRecording(testContext, currentMethodFullName);
-        var context = await playwrightPage.NewContextAsync(options);
-
-        await context.EnableBlazorWasmCaching();
-        await context.SetBlazorWebAssemblyServerAddress(testServer.WebAppServerAddress.ToString());
-
-        var page = await context.NewPageAsync();
-        var signinPage = new SignInPage(page, testServer.WebAppServerAddress);
-
-        Assertions.SetDefaultExpectTimeout(30_000); // Extended timeout for initial WebAssembly load and caching
-
-        await signinPage.Open();
-        await signinPage.AssertOpen();
-
-        Assertions.SetDefaultExpectTimeout(10_000); // Standard timeout for subsequent tests
-
-        var signedInPage = await signinPage.SignInWithEmail();
-        await signedInPage.AssertSignInSuccess();
-
-        var state = await page.Context.StorageStateAsync();
-        if (string.IsNullOrEmpty(state))
-            throw new InvalidOperationException("Authentication state is null or empty.");
-
-        AuthenticationState = state.Replace(testServer.WebAppServerAddress.OriginalString.TrimEnd('/'), "[ServerAddress]");
-
-        await context.FinalizeVideoRecording(testContext, currentMethodFullName);
-        await context.Browser!.CloseAsync();
-        await context.Browser!.DisposeAsync();
+        if (aspireApp is not null)
+        {
+            await aspireApp.StopAsync();
+            await aspireApp.DisposeAsync();
+        }
     }
     //#endif
 }

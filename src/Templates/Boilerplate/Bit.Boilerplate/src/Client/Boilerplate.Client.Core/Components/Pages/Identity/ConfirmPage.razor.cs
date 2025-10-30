@@ -1,4 +1,4 @@
-using Boilerplate.Shared.Dtos.Identity;
+﻿using Boilerplate.Shared.Dtos.Identity;
 using Boilerplate.Shared.Controllers.Identity;
 
 namespace Boilerplate.Client.Core.Components.Pages.Identity;
@@ -81,13 +81,12 @@ public partial class ConfirmPage
             var signInResponse = await identityController.ConfirmEmail(new()
             {
                 Email = emailModel.Email,
-                Token = emailModel.Token,
-                DeviceInfo = telemetryContext.Platform
+                Token = emailModel.Token
             }, CurrentCancellationToken);
 
             await AuthManager.StoreTokens(signInResponse, true);
 
-            NavigationManager.NavigateTo(ReturnUrlQueryString ?? Urls.HomePage, replace: true);
+            NavigationManager.NavigateTo(ReturnUrlQueryString ?? PageUrls.Home, replace: true);
 
             isEmailConfirmed = true;
         });
@@ -112,13 +111,12 @@ public partial class ConfirmPage
             var signInResponse = await identityController.ConfirmPhone(new()
             {
                 Token = phoneModel.Token,
-                DeviceInfo = telemetryContext.Platform,
                 PhoneNumber = phoneModel.PhoneNumber
             }, CurrentCancellationToken);
 
             await AuthManager.StoreTokens(signInResponse, true);
 
-            NavigationManager.NavigateTo(ReturnUrlQueryString ?? Urls.HomePage, replace: true);
+            NavigationManager.NavigateTo(ReturnUrlQueryString ?? PageUrls.Home, replace: true);
 
             isPhoneConfirmed = true;
         });

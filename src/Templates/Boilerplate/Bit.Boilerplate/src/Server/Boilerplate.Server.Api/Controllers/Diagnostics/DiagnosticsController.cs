@@ -14,6 +14,7 @@ namespace Boilerplate.Server.Api.Controllers.Diagnostics;
 [Route("api/[controller]/[action]")]
 public partial class DiagnosticsController : AppControllerBase, IDiagnosticsController
 {
+    [AutoInject] private IHostEnvironment env = default!;
     //#if (notification == true)
     [AutoInject] private PushNotificationService pushNotificationService = default!;
     //#endif
@@ -21,7 +22,7 @@ public partial class DiagnosticsController : AppControllerBase, IDiagnosticsCont
     [AutoInject] private IHubContext<AppHub> appHubContext = default!;
     //#endif
 
-    [HttpPost]
+    [HttpGet]
     public async Task<string> PerformDiagnostics([FromQuery] string? signalRConnectionId, [FromQuery] string? pushNotificationSubscriptionDeviceId, CancellationToken cancellationToken)
     {
         StringBuilder result = new();
@@ -51,14 +52,18 @@ public partial class DiagnosticsController : AppControllerBase, IDiagnosticsCont
 
             result.AppendLine($"Subscription exists: {(subscription is not null).ToString().ToLowerInvariant()}");
 
-            await pushNotificationService.RequestPush("Test Push", $"Open terms page. {DateTimeOffset.Now:HH:mm:ss}", "testAction", Urls.TermsPage, userRelatedPush: false, s => s.DeviceId == pushNotificationSubscriptionDeviceId, cancellationToken);
+            await pushNotificationService.RequestPush("Test Push", $"Open terms page. {DateTimeOffset.Now:HH:mm:ss}", "testAction", PageUrls.Terms, userRelatedPush: false, s => s.DeviceId == pushNotificationSubscriptionDeviceId, cancellationToken);
         }
         //#endif
 
         //#if (signalR == true)
         if (string.IsNullOrEmpty(signalRConnectionId) is false)
         {
-            await appHubContext.Clients.Client(signalRConnectionId).SendAsync(SignalREvents.SHOW_MESSAGE, DateTimeOffset.Now.ToString("HH:mm:ss"), cancellationToken);
+            var success = await appHubContext.Clients.Client(signalRConnectionId).InvokeAsync<bool>(SignalREvents.SHOW_MESSAGE, $"Open terms page. {DateTimeOffset.Now:HH:mm:ss}", new Dictionary<string, string?> { { "pageUrl", PageUrls.Terms }, { "action", "testAction" } }, cancellationToken);
+            if (success is false) // Client would return false if it's unable to show the message with custom action.
+            {
+                await appHubContext.Clients.Client(signalRConnectionId).SendAsync(SignalREvents.SHOW_MESSAGE, $"Simple message. {DateTimeOffset.Now:HH:mm:ss}", null, cancellationToken);
+            }
         }
         //#endif
 
@@ -70,6 +75,11 @@ public partial class DiagnosticsController : AppControllerBase, IDiagnosticsCont
         {
             result.AppendLine($"{header.Key}: {header.Value}");
         }
+
+        result.AppendLine();
+        result.AppendLine($"Environment: {env.EnvironmentName}");
+        result.AppendLine("Base url: " + Request.GetBaseUrl());
+        result.AppendLine("Web app url: " + Request.GetWebAppUrl());
 
         return result.ToString();
     }

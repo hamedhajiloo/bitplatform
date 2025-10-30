@@ -40,6 +40,9 @@ public partial class ProductDto
 
     public bool HasPrimaryImage { get; set; } = false;
 
+    [Display(Name = nameof(AppStrings.AltText))]
+    public string? PrimaryImageAltText { get; set; }
+
     public string? GetPrimaryMediumImageUrl(Uri absoluteServerAddress)
     {
         return HasPrimaryImage is false
@@ -62,6 +65,6 @@ public partial class ProductDto
     }
 
     //#if (module == "Sales")
-    public string PageUrl => $"{Urls.ProductPage}/{ShortId}";
+    public string PageUrl => $"{PageUrls.Product}/{ShortId}";
     //#endif
 }

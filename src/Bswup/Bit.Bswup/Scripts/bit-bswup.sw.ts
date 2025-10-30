@@ -1,4 +1,4 @@
-﻿self['bit-bswup.sw version'] = '9.8.0';
+﻿self['bit-bswup.sw version'] = '10.0.0-pre-05';
 
 interface Window {
     clients: any
@@ -19,15 +19,15 @@ interface Window {
     ignoreDefaultInclude: any
     ignoreDefaultExclude: any
     isPassive: any
-    disablePassiveFirstBoot: any
     enableIntegrityCheck: any
     errorTolerance: any
     enableDiagnostics: any
     enableFetchDiagnostics: any
     disableHashlessAssetsUpdate: any
     forcePrerender: any
+    enableCacheControl: any
 
-    prerenderMode: any
+    mode: any
 }
 
 interface Event {
@@ -47,32 +47,37 @@ const VERSION = self.assetsManifest.version;
 const CACHE_NAME_PREFIX = 'bit-bswup';
 const CACHE_NAME = `${CACHE_NAME_PREFIX} - ${VERSION}`;
 
-switch (self.prerenderMode) {
-    case 'none': // like admin
+switch (self.mode) {
+    case 'NoPrerender': // like adminpanel
+        self.isPassive = true;
         self.defaultUrl ||= "/";
-        self.isPassive ||= true;
         self.forcePrerender ||= false;
         self.errorTolerance ||= 'lax';
         self.caseInsensitiveUrl ||= true;
-        self.disablePassiveFirstBoot ||= false;
         self.noPrerenderQuery ||= 'no-prerender=true';
         break;
-    case 'initial': // like todo
+    case 'InitialPrerender': // like todo
+        self.isPassive = true;
         self.defaultUrl ||= "/";
-        self.isPassive ||= true;
         self.forcePrerender ||= false;
         self.errorTolerance ||= 'lax';
         self.caseInsensitiveUrl ||= true;
-        self.disablePassiveFirstBoot ||= true;
         self.noPrerenderQuery ||= 'no-prerender=true';
         break;
-    case 'always': // like sales
+    case 'AlwaysPrerender': // like sales
+        self.isPassive = true;
         self.defaultUrl ||= "/";
-        self.isPassive ||= true;
         self.forcePrerender ||= true;
         self.errorTolerance ||= 'lax';
         self.caseInsensitiveUrl ||= true;
-        self.disablePassiveFirstBoot ||= true;
+        self.noPrerenderQuery ||= '';
+        break;
+    case 'FullOffline': // like todo-offline
+        self.isPassive = false;
+        self.defaultUrl ||= "/";
+        self.forcePrerender ||= false;
+        self.errorTolerance ||= 'lax';
+        self.caseInsensitiveUrl ||= true;
         self.noPrerenderQuery ||= '';
         break;
 }
@@ -82,7 +87,7 @@ self.addEventListener('activate', e => e.waitUntil(handleActivate(e)));
 self.addEventListener('fetch', e => e.respondWith(handleFetch(e)));
 self.addEventListener('message', handleMessage);
 
-async function handleInstall(e) {
+async function handleInstall(e: any) {
     diag('installing version:', VERSION);
 
     sendMessage({ type: 'install', data: { version: VERSION, isPassive: self.isPassive } });
@@ -90,7 +95,7 @@ async function handleInstall(e) {
     createAssetsCache();
 }
 
-async function handleActivate(e) {
+async function handleActivate(e: any) {
     diag('activate version:', VERSION);
 
     //await deleteOldCaches();
@@ -130,8 +135,8 @@ diag('ASSETS_INCLUDE:', ASSETS_INCLUDE);
 diag('ASSETS_EXCLUDE:', ASSETS_EXCLUDE);
 
 const ALL_ASSETS = self.assetsManifest.assets
-    .filter(asset => ASSETS_INCLUDE.some(pattern => pattern.test(asset.url)))
-    .filter(asset => !ASSETS_EXCLUDE.some(pattern => pattern.test(asset.url)))
+    .filter((asset: any) => ASSETS_INCLUDE.some(pattern => pattern.test(asset.url)))
+    .filter((asset: any) => !ASSETS_EXCLUDE.some(pattern => pattern.test(asset.url)))
     .concat(EXTERNAL_ASSETS);
 
 diag('ALL_ASSETS:', ALL_ASSETS);
@@ -142,7 +147,7 @@ diag('UNIQUE_ASSETS:', UNIQUE_ASSETS);
 
 diagGroupEnd();
 
-async function handleFetch(e) {
+async function handleFetch(e: any) {
     const req = e.request as Request;
 
     if (PROHIBITED_URLS.some(pattern => pattern.test(req.url))) {
@@ -211,7 +216,7 @@ async function handleFetch(e) {
     return response;
 }
 
-function handleMessage(e) {
+function handleMessage(e: MessageEvent<string>) {
     diag('handleMessage:', e);
 
     if (e.data === 'SKIP_WAITING') {
@@ -256,7 +261,7 @@ async function createAssetsCache(ignoreProgressReport = false) {
     let newCacheKeys = await newCache.keys();
     const firstTime = newCacheKeys.length === 0;
     const passiveFirstTime = self.isPassive && firstTime
-    if (passiveFirstTime && self.disablePassiveFirstBoot) {
+    if (passiveFirstTime) {
         if (!ignoreProgressReport) {
             sendMessage({ type: 'bypass', data: { firstTime: true } });
         }
@@ -267,33 +272,6 @@ async function createAssetsCache(ignoreProgressReport = false) {
 
     let current = 0;
     let total = UNIQUE_ASSETS.length;
-
-    if (passiveFirstTime) {
-        const blazorBootAsset = UNIQUE_ASSETS.find(a => a.url.includes('blazor.boot.json'));
-        const blazorBootJson = await (await addCache(false, blazorBootAsset)).json();
-        const blazorResources = Object.keys(blazorBootJson.resources.assembly)
-            .concat(Object.keys(blazorBootJson.resources.runtime || {})) // before .NET 8
-            .concat(Object.keys(blazorBootJson.resources.jsModuleNative || {})) // after .NET 8
-            .concat(Object.keys(blazorBootJson.resources.jsModuleRuntime || {}))
-            .concat(Object.keys(blazorBootJson.resources.wasmNative || {}))
-            .concat(Object.keys(blazorBootJson.resources.coreAssembly || {})) // after .NET 9
-            .concat(Object.keys(blazorBootJson.resources.icu || {}))
-            .concat(Object.keys(blazorBootJson.resources.jsModuleGlobalization || {}));
-        const blazorAssets = blazorResources.map(r => UNIQUE_ASSETS.find(a => a.url.endsWith(`/${r}`))).filter(a => !!a);
-
-        diag('blazorBootAsset:', blazorBootAsset);
-        diag('blazorBootJson:', blazorBootJson);
-        diag('blazorResources:', blazorResources);
-        diag('blazorAssets:', blazorAssets);
-
-        total = blazorAssets.length;
-        const promises = blazorAssets.map(addCache.bind(null, true));
-
-        diag('createAssetsCache ended - passive firstTime');
-        diagGroupEnd();
-
-        return;
-    }
 
     const oldUrls = [];
     const updatedAssets = [];
@@ -335,7 +313,7 @@ async function createAssetsCache(ignoreProgressReport = false) {
     diag('createAssetsCache ended.');
     diagGroupEnd();
 
-    async function addCache(report, asset) {
+    async function addCache(report: boolean, asset: any) {
         try {
             const request = createNewAssetRequest(asset);
             const responsePromise = fetch(request);
@@ -380,16 +358,26 @@ function createCacheUrl(asset: any) {
     return asset.hash ? `${asset.url}.${asset.hash}` : asset.url;
 }
 
-function createNewAssetRequest(asset) {
-    let assetUrl;
+function createNewAssetRequest(asset: any) {
+    const version = ((asset.hash || self.assetsManifest.version) as string).replaceAll('+', '-').replaceAll('/', '_');
+    const trimmedVersion = encodeURIComponent(trimEnd(version, '='));
+
+    const url = new URL(asset.url, self.location.origin);
+    url.searchParams.set('v', trimmedVersion);
     if (asset.url === DEFAULT_URL && self.noPrerenderQuery) {
-        assetUrl = `${asset.url}?v=${asset.hash || self.assetsManifest.version}&${self.noPrerenderQuery}`;
-    } else {
-        assetUrl = `${asset.url}?v=${asset.hash || self.assetsManifest.version}`;
+        new URLSearchParams(String(self.noPrerenderQuery)).forEach((value, key) => url.searchParams.set(key, value));
     }
-    const requestInit: RequestInit = asset.hash && asset.hash.startsWith('sha') && self.enableIntegrityCheck
-        ? { cache: 'no-store', integrity: asset.hash, headers: [['cache-control', 'public, max-age=3153600']] }
-        : { cache: 'no-store', headers: [['cache-control', 'public, max-age=3153600']] };
+
+    const assetUrl = url.toString();
+
+    const requestInit: RequestInit = {};
+    if (asset.hash?.startsWith('sha') && self.enableIntegrityCheck) {
+        requestInit.integrity = asset.hash;
+    }
+    if (self.enableCacheControl) {
+        requestInit.cache = 'no-store';
+        requestInit.headers = [['cache-control', 'no-cache']];
+    }
 
     return new Request(assetUrl, requestInit);
 }
@@ -400,7 +388,7 @@ async function deleteOldCaches() {
     return Promise.all(promises);
 }
 
-function uniqueAssets(assets) {
+function uniqueAssets(assets: any) {
     const unique = {};
     const distinct = [];
     for (let i = 0; i < assets.length; i++) {
@@ -414,13 +402,13 @@ function uniqueAssets(assets) {
     return distinct;
 }
 
-function sendMessage(message) {
+function sendMessage(message: any) {
     self.clients
         .matchAll({ includeUncontrolled: true })
-        .then(clients => (clients || []).forEach(client => client.postMessage(typeof message === 'string' ? message : JSON.stringify(message))));
+        .then((clients: any) => (clients || []).forEach((client: any) => client.postMessage(typeof message === 'string' ? message : JSON.stringify(message))));
 }
 
-function prepareExternalAssetsArray(value) {
+function prepareExternalAssetsArray(value: any) {
     const array = value ? (value instanceof Array ? value : [value]) : [];
 
     return array.map(asset => {
@@ -436,8 +424,13 @@ function prepareExternalAssetsArray(value) {
     }).filter(asset => asset !== null);
 }
 
-function prepareRegExpArray(value) {
+function prepareRegExpArray(value: any) {
     return value ? (value instanceof Array ? value : [value]).filter(p => p instanceof RegExp) : [];
+}
+
+function trimEnd(str: string, char: string) {
+    const escaped = char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // escape regex special chars
+    return str.replace(new RegExp(`${escaped}+$`), "");
 }
 
 function diagGroup(label: string) {

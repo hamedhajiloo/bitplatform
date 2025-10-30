@@ -1,4 +1,4 @@
-//+:cnd:noEmit
+﻿//+:cnd:noEmit
 using Boilerplate.Client.Core;
 
 namespace Boilerplate.Client.Web;
@@ -18,7 +18,7 @@ public class ClientWebSettings : ClientCoreSettings
         {
             Validator.TryValidateObject(AdsPushVapid, new ValidationContext(AdsPushVapid), validationResults, true);
 
-            if (AppEnvironment.IsDev() is false && AdsPushVapid.PublicKey is "BDSNUvuIISD8NQVByQANEtZ2foKaENIcIGUxsiQs9kDz11fQik8c9WeiMwUHs3iTgNNH4nvXioNQIEsn4OAjTKc")
+            if (AppEnvironment.IsDevelopment() is false && AdsPushVapid.PublicKey is "BDSNUvuIISD8NQVByQANEtZ2foKaENIcIGUxsiQs9kDz11fQik8c9WeiMwUHs3iTgNNH4nvXioNQIEsn4OAjTKc")
             {
                 validationResults.Add(new ValidationResult("Please set your own AdsPushVapid.PublicKey in Client.Core's appsettings.json"));
             }
@@ -36,7 +36,7 @@ public class ClientWebSettings : ClientCoreSettings
 public class AdsPushVapidOptions
 {
     /// <summary>
-    /// Web push's vapid. More info at https://tools.reactpwa.com/vapid
+    /// Web push's vapid. More info at https://d3v.one/vapid-key-generator/
     /// </summary>
     [Required]
     public string PublicKey { get; set; } = default!;

@@ -21,7 +21,7 @@ public partial class ProductController : AppControllerBase, IProductController
     //#if (signalR == true)
     [AutoInject] private IHubContext<AppHub> appHubContext = default!;
     //#endif
-    //#if (signalR == true || database == "PostgreSQL")
+    //#if (database == "PostgreSQL" || database == "SqlServer")
     [AutoInject] private ProductEmbeddingService productEmbeddingService = default!;
     //#endif
     [AutoInject] private ResponseCacheService responseCacheService = default!;
@@ -47,10 +47,10 @@ public partial class ProductController : AppControllerBase, IProductController
     }
 
     [HttpGet("{searchQuery}")]
-    public async Task<PagedResult<ProductDto>> GetProductsBySearchQuery(string searchQuery, ODataQueryOptions<ProductDto> odataQuery, CancellationToken cancellationToken)
+    public async Task<PagedResult<ProductDto>> SearchProducts(string searchQuery, ODataQueryOptions<ProductDto> odataQuery, CancellationToken cancellationToken)
     {
-        //#if (database == "PostgreSQL")
-        var query = (IQueryable<ProductDto>)odataQuery.ApplyTo((await (productEmbeddingService.GetProductsBySearchQuery(searchQuery, cancellationToken))).Project(),
+        //#if (database == "PostgreSQL" || database == "SqlServer")
+        var query = (IQueryable<ProductDto>)odataQuery.ApplyTo((await (productEmbeddingService.SearchProducts(searchQuery, cancellationToken))).Project(),
             ignoreQueryOptions: AllowedQueryOptions.Top | AllowedQueryOptions.Skip | AllowedQueryOptions.OrderBy /* Ordering can disrupt the results of the embedding service. */);
         var totalCount = await query.LongCountAsync(cancellationToken);
 
@@ -59,9 +59,7 @@ public partial class ProductController : AppControllerBase, IProductController
 
         return new PagedResult<ProductDto>(await query.ToArrayAsync(cancellationToken), totalCount);
         //#else
-        // Embedding based search is only implemented for PostgreSQL.
-        // Simply return whole products list.
-        return await GetProducts(odataQuery, cancellationToken);
+        throw new NotImplementedException(); // Embedding based search is only implemented for PostgreSQL and SQL Server only.
         //#endif
     }
 
@@ -85,9 +83,10 @@ public partial class ProductController : AppControllerBase, IProductController
 
         await Validate(entityToAdd, cancellationToken);
 
-        //#if (database == "PostgreSQL" || signalR == true)
+        //#if (database == "PostgreSQL" || database == "SqlServer" || signalR == true)
         //#if (IsInsideProjectTemplate == true)
-        if (DbContext.Database.ProviderName!.EndsWith("PostgreSQL", StringComparison.InvariantCulture) is false)
+        if (DbContext.Database.ProviderName!.EndsWith("PostgreSQL", StringComparison.InvariantCulture) ||
+            DbContext.Database.ProviderName!.EndsWith("SqlServer", StringComparison.InvariantCulture))
         {
             //#endif
             await productEmbeddingService.Embed(entityToAdd, cancellationToken);
@@ -117,9 +116,10 @@ public partial class ProductController : AppControllerBase, IProductController
 
         await Validate(entityToUpdate, cancellationToken);
 
-        //#if (database == "PostgreSQL" || signalR == true)
+        //#if (database == "PostgreSQL" || database == "SqlServer" || signalR == true)
         //#if (IsInsideProjectTemplate == true)
-        if (DbContext.Database.ProviderName!.EndsWith("PostgreSQL", StringComparison.InvariantCulture) is false)
+        if (DbContext.Database.ProviderName!.EndsWith("PostgreSQL", StringComparison.InvariantCulture) ||
+            DbContext.Database.ProviderName!.EndsWith("SqlServer", StringComparison.InvariantCulture))
         {
             //#endif
             await productEmbeddingService.Embed(entityToUpdate, cancellationToken);
@@ -169,8 +169,9 @@ public partial class ProductController : AppControllerBase, IProductController
 
     private async Task Validate(Product product, CancellationToken cancellationToken)
     {
+        var entry = DbContext.Entry(product);
         // Remote validation example: Any errors thrown here will be displayed in the client's edit form component.
-        if (DbContext.Entry(product).Property(c => c.Name).IsModified
+        if ((entry.State is EntityState.Added || entry.Property(c => c.Name).IsModified)
             && await DbContext.Products.AnyAsync(p => p.Name == product.Name, cancellationToken))
             throw new ResourceValidationException((nameof(ProductDto.Name), [Localizer[nameof(AppStrings.DuplicateProductName)]]));
     }

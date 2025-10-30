@@ -1,4 +1,4 @@
-//+:cnd:noEmit
+﻿//+:cnd:noEmit
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -6,6 +6,7 @@ namespace Boilerplate.Client.Core.Services;
 
 public abstract partial class ClientExceptionHandlerBase : SharedExceptionHandler, IExceptionHandler
 {
+    [AutoInject] protected readonly PubSubService PubSubService = default!;
     [AutoInject] protected readonly SnackBarService SnackBarService = default!;
     [AutoInject] protected readonly ITelemetryContext TelemetryContext = default!;
     [AutoInject] protected readonly BitMessageBoxService MessageBoxService = default!;
@@ -37,7 +38,7 @@ public abstract partial class ClientExceptionHandlerBase : SharedExceptionHandle
         ExceptionDisplayKind displayKind,
         Dictionary<string, object> parameters)
     {
-        var isDevEnv = AppEnvironment.IsDev();
+        var isDevEnv = AppEnvironment.IsDevelopment();
 
         using (var scope = Logger.BeginScope(parameters.ToDictionary(i => i.Key, i => i.Value ?? string.Empty)))
         {
@@ -79,6 +80,16 @@ public abstract partial class ClientExceptionHandlerBase : SharedExceptionHandle
         if (exception is ServerConnectionException)
             return ExceptionDisplayKind.NonInterrupting;
 
+        if (exception is UnauthorizedException)
+            return ExceptionDisplayKind.NonInterrupting;
+
         return ExceptionDisplayKind.Interrupting;
+    }
+
+    public override bool IgnoreException(Exception exception)
+    {
+        return exception is TaskCanceledException ||
+            exception is OperationCanceledException ||
+            exception is TimeoutException || base.IgnoreException(exception);
     }
 }

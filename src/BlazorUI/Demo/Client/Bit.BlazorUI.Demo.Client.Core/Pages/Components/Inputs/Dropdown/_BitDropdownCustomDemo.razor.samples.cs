@@ -953,7 +953,7 @@ private async ValueTask<BitDropdownItemsProviderResult<Product>> LoadItems(
             query.Add(""$filter"", $""contains(Name,'{request.Search}')"");
         }
 
-        var url = NavManager.GetUriWithQueryParameters(""Products/GetProducts"", query);
+        var url = NavManager.GetUriWithQueryParameters(""api/Products/GetProducts"", query);
 
         var data = await HttpClient.GetFromJsonAsync(url, AppJsonContext.Default.PagedResultProductDto);
 
@@ -1222,7 +1222,7 @@ private BitDropdownNameSelectors<Product, string> comboBoxNameSelectors = new()
         box-shadow: darkgray 0 0 0.5rem;
     }
 
-    .custom-container, .custom-container:after {
+    .custom-container, .custom-container::after {
         border-radius: 1rem;
     }
 

@@ -12,6 +12,8 @@ public class StartChatbotRequest
     /// When the chat panel is reopened, the client must resend the chat history to the server.
     /// </summary>
     public List<AiChatMessage> ChatMessagesHistory { get; set; } = [];
+
+    public Uri? ServerApiAddress { get; set; } // Getting the api address in ChatBot Hub has some complexities, specially when using Azure SignalR or being behind a reverse proxy, so we pass it from the client side.
 }
 
 public enum AiChatMessageRole
@@ -27,4 +29,9 @@ public class AiChatMessage
 
     [JsonIgnore]
     public bool Successful { get; set; } = true;
+}
+
+public class AiChatFollowUpList
+{
+    public List<string> FollowUpSuggestions { get; set; } = [];
 }

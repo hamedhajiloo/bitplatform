@@ -12,8 +12,8 @@ public partial class BitSearchBox : BitTextInputBase<string?>
     private bool _inputHasFocus;
     private int _selectedIndex = -1;
     private string _inputId = string.Empty;
-    private List<string> _searchItems = [];
     private string _calloutId = string.Empty;
+    private List<string> _viewSuggestedItems = [];
     private string _scrollContainerId = string.Empty;
     private CancellationTokenSource? _cancellationTokenSource;
     private DotNetObjectReference<BitSearchBox> _dotnetObj = default!;
@@ -25,20 +25,20 @@ public partial class BitSearchBox : BitTextInputBase<string?>
 
 
     /// <summary>
-    /// The accent color kind of the search box.
+    /// The background color kind of the search box.
     /// </summary>
     [Parameter, ResetClassBuilder]
-    public BitColorKind? Accent { get; set; }
+    public BitColorKind? Background { get; set; }
 
     /// <summary>
-    /// Custom CSS classes for different parts of the BitSearchBox.
+    /// Custom CSS classes for different parts of the search box.
     /// </summary>
     [Parameter] public BitSearchBoxClassStyles? Classes { get; set; }
 
     /// <summary>
     /// The custom template for clear button icon.
     /// </summary>
-    [Parameter] public RenderFragment? CleanButtonTemplate { get; set; }
+    [Parameter] public RenderFragment? ClearButtonTemplate { get; set; }
 
     /// <summary>
     /// The general color of the search box, used for colored parts like icons.
@@ -47,7 +47,7 @@ public partial class BitSearchBox : BitTextInputBase<string?>
     public BitColor? Color { get; set; }
 
     /// <summary>
-    /// The default value of the text in the SearchBox, in the case of an uncontrolled component.
+    /// The default value of the text in the search box, in the case of an uncontrolled component.
     /// </summary>
     [Parameter] public string? DefaultValue { get; set; }
 
@@ -70,7 +70,7 @@ public partial class BitSearchBox : BitTextInputBase<string?>
     public bool HideIcon { get; set; }
 
     /// <summary>
-    /// Whether to hide the clear button when the BitSearchBox has value.
+    /// Whether to hide the clear button when the search box has value.
     /// </summary>
     [Parameter] public bool HideClearButton { get; set; }
 
@@ -95,6 +95,11 @@ public partial class BitSearchBox : BitTextInputBase<string?>
     /// The minimum character requirement for doing a search in suggest items.
     /// </summary>
     [Parameter] public int MinSuggestTriggerChars { get; set; } = 3;
+
+    /// <summary>
+    /// Removes the overlay of suggest items callout.
+    /// </summary>
+    [Parameter] public bool Modeless { get; set; }
 
     /// <summary>
     /// Removes the default border of the search box.
@@ -123,6 +128,16 @@ public partial class BitSearchBox : BitTextInputBase<string?>
     [Parameter] public string? Placeholder { get; set; }
 
     /// <summary>
+    /// Prefix text displayed before the search box input. This is not included in the value.
+    /// </summary>
+    [Parameter] public string? Prefix { get; set; }
+
+    /// <summary>
+    /// The custom template for the prefix of the search box.
+    /// </summary>
+    [Parameter] public RenderFragment? PrefixTemplate { get; set; }
+
+    /// <summary>
     /// Custom icon name for the search button.
     /// </summary>
     [Parameter] public string SearchButtonIconName { get; set; } = "ChromeBackMirrored";
@@ -139,9 +154,19 @@ public partial class BitSearchBox : BitTextInputBase<string?>
     public bool ShowSearchButton { get; set; }
 
     /// <summary>
-    /// Custom CSS styles for different parts of the BitSearchBox.
+    /// Custom CSS styles for different parts of the search box.
     /// </summary>
     [Parameter] public BitSearchBoxClassStyles? Styles { get; set; }
+
+    /// <summary>
+    /// Suffix text displayed after the search box input. This is not included in the value. 
+    /// </summary>
+    [Parameter] public string? Suffix { get; set; }
+
+    /// <summary>
+    /// The custom template for the suffix of the search box.
+    /// </summary>
+    [Parameter] public RenderFragment? SuffixTemplate { get; set; }
 
     /// <summary>
     /// Custom search function to be used in place of the default search algorithm.
@@ -159,12 +184,12 @@ public partial class BitSearchBox : BitTextInputBase<string?>
     [Parameter] public BitSearchBoxSuggestItemsProvider? SuggestItemsProvider { get; set; }
 
     /// <summary>
-    /// The custom template for rendering the suggest items of the BitSearchBox.
+    /// The custom template for rendering the suggest items of the search box.
     /// </summary>
     [Parameter] public RenderFragment<string>? SuggestItemTemplate { get; set; }
 
     /// <summary>
-    /// Whether or not the SearchBox is underlined.
+    /// Whether or not the search box is underlined.
     /// </summary>
     [Parameter, ResetClassBuilder]
     public bool Underlined { get; set; }
@@ -199,13 +224,15 @@ public partial class BitSearchBox : BitTextInputBase<string?>
     {
         ClassBuilder.Register(() => Classes?.Root);
 
-        ClassBuilder.Register(() => CurrentValue.HasValue() ? $"bit-srb-{(FixedIcon ? "fic-" : string.Empty)}hvl" : string.Empty);
+        ClassBuilder.Register(() => FixedIcon ? "bit-srb-fic" : string.Empty);
+
+        ClassBuilder.Register(() => CurrentValue.HasValue() ? $"bit-srb-hvl" : string.Empty);
 
         ClassBuilder.Register(() => DisableAnimation ? "bit-srb-nan" : string.Empty);
 
         ClassBuilder.Register(() => Underlined ? "bit-srb-und" : string.Empty);
 
-        ClassBuilder.Register(() => _inputHasFocus ? $"bit-srb-{(FixedIcon ? "fic-" : string.Empty)}foc {Classes?.Focused}" : string.Empty);
+        ClassBuilder.Register(() => _inputHasFocus ? $"bit-srb-foc {Classes?.Focused}" : string.Empty);
 
         ClassBuilder.Register(() => ShowSearchButton ? "bit-srb-ssb" : string.Empty);
 
@@ -213,13 +240,13 @@ public partial class BitSearchBox : BitTextInputBase<string?>
 
         ClassBuilder.Register(() => NoBorder ? "bit-srb-nbr" : string.Empty);
 
-        ClassBuilder.Register(() => Accent switch
+        ClassBuilder.Register(() => Background switch
         {
-            BitColorKind.Primary => "bit-srb-apri",
-            BitColorKind.Secondary => "bit-srb-asec",
-            BitColorKind.Tertiary => "bit-srb-ater",
-            BitColorKind.Transparent => "bit-srb-atra",
-            _ => string.Empty
+            BitColorKind.Primary => "bit-srb-bpr",
+            BitColorKind.Secondary => "bit-srb-bse",
+            BitColorKind.Tertiary => "bit-srb-btr",
+            BitColorKind.Transparent => "bit-srb-btn",
+            _ => "bit-srb-bpr"
         });
 
         ClassBuilder.Register(() => Color switch
@@ -289,23 +316,37 @@ public partial class BitSearchBox : BitTextInputBase<string?>
 
     private void HandleOnValueChanged(object? sender, EventArgs args)
     {
-        _ = SearchItems();
+        if (_selectedIndex == -1)
+        {
+            _ = SearchItems();
+        }
+
+        _selectedIndex = -1;
 
         ClassBuilder.Reset();
     }
 
-    private void HandleInputFocusIn()
+    private async Task HandleInputFocusIn()
     {
         _inputHasFocus = true;
         ClassBuilder.Reset();
         StyleBuilder.Reset();
+
+        await Task.Delay(100);
+        await OpenOrCloseCallout();
     }
 
-    private void HandleInputFocusOut()
+    private async Task HandleInputFocusOut()
     {
         _inputHasFocus = false;
         ClassBuilder.Reset();
         StyleBuilder.Reset();
+
+        if (Modeless)
+        {
+            await Task.Delay(100);
+            await CloseCallout();
+        }
     }
 
     private async Task HandleOnSearchButtonClick()
@@ -334,9 +375,19 @@ public partial class BitSearchBox : BitTextInputBase<string?>
 
         if (eventArgs.Key == "Enter")
         {
-            CurrentValue = await _js.BitUtilsGetProperty(InputElement, "value");
-            await CloseCallout();
-            await OnSearch.InvokeAsync(CurrentValue);
+            if (_selectedIndex > -1 && _viewSuggestedItems.Count > _selectedIndex)
+            {
+                await HandleOnSuggestedItemClick(_viewSuggestedItems[_selectedIndex]);
+            }
+            else
+            {
+                CurrentValue = await _js.BitUtilsGetProperty(InputElement, "value");
+
+                await CloseCallout();
+
+                await OnSearch.InvokeAsync(CurrentValue);
+            }
+
             return;
         }
 
@@ -344,38 +395,53 @@ public partial class BitSearchBox : BitTextInputBase<string?>
 
         if (eventArgs.Key == "Escape")
         {
+            if (_isOpen)
+            {
+                await CloseCallout();
+                return;
+            }
+
             CurrentValue = string.Empty;
+
             await CloseCallout();
+
             await OnEscape.InvokeAsync();
+
             await OnClear.InvokeAsync();
+
             //await InputElement.FocusAsync(); // is it required when the keydown event is captured on the input itself?
+
             return;
         }
 
         if (eventArgs.Key == "ArrowUp")
         {
             await ChangeSelectedItem(true);
+
             return;
         }
 
         if (eventArgs.Key == "ArrowDown")
         {
             await ChangeSelectedItem(false);
+
             return;
         }
     }
 
-    private async Task HandleOnItemClick(string item)
+    private async Task HandleOnSuggestedItemClick(string item)
     {
         if (IsEnabled is false || ReadOnly || InvalidValueBinding()) return;
 
-        CurrentValue = item;
-
         await CloseCallout();
+
+        _selectedIndex = 0;
+
+        CurrentValue = item;
 
         await OnSearch.InvokeAsync(CurrentValueAsString);
 
-        StateHasChanged();
+        await SearchItems(false);
     }
 
     private void SetInputMode()
@@ -383,24 +449,61 @@ public partial class BitSearchBox : BitTextInputBase<string?>
         _inputMode = InputMode?.ToString().ToLower();
     }
 
-    private async Task ToggleCallout()
+    private async Task SearchItems(bool openCallout = true)
     {
-        if (IsEnabled is false || IsDisposed) return;
+        if (CurrentValue.HasNoValue() || CurrentValue!.Length < MinSuggestTriggerChars)
+        {
+            _viewSuggestedItems = [];
+        }
+        else if (SuggestItemsProvider is not null)
+        {
+            _cancellationTokenSource?.Cancel();
+            _cancellationTokenSource?.Dispose();
+            _cancellationTokenSource = new();
+            _viewSuggestedItems = [.. (await SuggestItemsProvider(new(CurrentValue, MaxSuggestCount, _cancellationTokenSource.Token))).Take(MaxSuggestCount)];
+        }
+        else if (SuggestItems is not null)
+        {
+            _viewSuggestedItems = [.. SuggestItems
+                            .Where(i => SuggestFilterFunction is not null
+                                        ? SuggestFilterFunction.Invoke(CurrentValue, i)
+                                        : (i?.Contains(CurrentValue!, StringComparison.OrdinalIgnoreCase) ?? false))
+                            .Take(MaxSuggestCount)];
+        }
+        else
+        {
+            _viewSuggestedItems = [];
+        }
 
-        await _js.BitCalloutToggleCallout(_dotnetObj,
-                                          _Id,
-                                          null,
-                                          _calloutId,
-                                          null,
-                                          _isOpen,
-                                          BitResponsiveMode.None,
-                                          BitDropDirection.TopAndBottom,
-                                          Dir is BitDir.Rtl,
-                                          _scrollContainerId,
-                                          0,
-                                          string.Empty,
-                                          string.Empty,
-                                          true);
+        if (openCallout)
+        {
+            await OpenOrCloseCallout();
+        }
+    }
+
+    private async Task OpenOrCloseCallout()
+    {
+        if (IsEnabled is false) return;
+
+        if (_viewSuggestedItems.Any())
+        {
+            if (_isOpen is false)
+            {
+                _isOpen = true;
+
+                StateHasChanged();
+
+                await Task.Delay(100); // wait for UI to be rendered by Blazor before showing the callout so the calculation would be correct!
+
+                await ToggleCallout();
+            }
+
+            StateHasChanged();
+        }
+        else
+        {
+            await CloseCallout();
+        }
     }
 
     private async Task CloseCallout()
@@ -413,104 +516,70 @@ public partial class BitSearchBox : BitTextInputBase<string?>
         StateHasChanged();
     }
 
-    private async Task SearchItems()
+    private async Task ToggleCallout()
     {
-        if (CurrentValue.HasNoValue() || CurrentValue!.Length < MinSuggestTriggerChars)
-        {
-            _searchItems = [];
-        }
-        else if (SuggestItemsProvider is not null)
-        {
-            _cancellationTokenSource?.Cancel();
-            _cancellationTokenSource?.Dispose();
-            _cancellationTokenSource = new();
-            _searchItems = [.. (await SuggestItemsProvider(new(CurrentValue, MaxSuggestCount, _cancellationTokenSource.Token))).Take(MaxSuggestCount)];
-        }
-        else if (SuggestItems is not null)
-        {
-            _searchItems = [.. SuggestItems
-                            .Where(i => SuggestFilterFunction is not null
-                                        ? SuggestFilterFunction.Invoke(CurrentValue, i)
-                                        : (i?.Contains(CurrentValue!, StringComparison.OrdinalIgnoreCase) ?? false))
-                            .Take(MaxSuggestCount)];
-        }
-        else
-        {
-            _searchItems = [];
-        }
+        if (IsEnabled is false || IsDisposed) return;
 
-        await OpenOrCloseCallout();
-    }
-
-    private async Task OpenOrCloseCallout()
-    {
-        if (IsEnabled is false) return;
-
-        if (_searchItems.Any())
-        {
-            _selectedIndex = _searchItems.FindIndex(i => i == CurrentValue);
-
-            if (_isOpen is false)
-            {
-                _isOpen = true;
-                await ToggleCallout();
-                StateHasChanged();
-            }
-        }
-        else
-        {
-            await CloseCallout();
-        }
+        await _js.BitCalloutToggleCallout(
+            dotnetObj: _dotnetObj,
+            componentId: _Id,
+            component: null,
+            calloutId: _calloutId,
+            callout: null,
+            isCalloutOpen: _isOpen,
+            responsiveMode: BitResponsiveMode.None,
+            dropDirection: BitDropDirection.TopAndBottom,
+            isRtl: Dir is BitDir.Rtl,
+            scrollContainerId: _scrollContainerId,
+            scrollOffset: 0,
+            headerId: string.Empty,
+            footerId: string.Empty,
+            setCalloutWidth: false,
+            fixedCalloutWidth: false,
+            maxWindowWidth: 0);
     }
 
     private async Task ChangeSelectedItem(bool isArrowUp)
     {
-        if (_isOpen is false) return;
-        if (_searchItems.Any() is false) return;
+        if (_viewSuggestedItems.Any() is false) return;
 
-        var count = _searchItems.Count;
+        if (_isOpen is false)
+        {
+            await OpenOrCloseCallout();
+        }
 
-        if (_selectedIndex < 0 || count == 1)
-        {
-            _selectedIndex = isArrowUp ? count - 1 : 0;
-        }
-        else if (_selectedIndex == count - 1 && isArrowUp is false)
-        {
-            _selectedIndex = 0;
-        }
-        else if (_selectedIndex == 0 && isArrowUp)
+        _selectedIndex += isArrowUp ? -1 : +1;
+
+        var count = _viewSuggestedItems.Count;
+
+        if (_selectedIndex < 0)
         {
             _selectedIndex = count - 1;
         }
-        else if (isArrowUp)
-        {
-            _selectedIndex--;
-        }
-        else
-        {
-            _selectedIndex++;
-        }
 
-        CurrentValue = _searchItems[_selectedIndex];
+        if (_selectedIndex >= count)
+        {
+            _selectedIndex = 0;
+        }
 
         await _js.BitSearchBoxMoveCursorToEnd(InputElement);
     }
 
     private int? GetTotalItems()
     {
-        if (_searchItems is null) return null;
+        if (_viewSuggestedItems is null) return null;
 
-        return _searchItems.Count;
+        return _viewSuggestedItems.Count;
     }
 
     private int? GetItemPosInSet(string item)
     {
-        return _searchItems?.IndexOf(item) + 1;
+        return _viewSuggestedItems?.IndexOf(item) + 1;
     }
 
     private bool GetIsSelected(string item)
     {
-        return _selectedIndex > -1 && _searchItems.IndexOf(item) == _selectedIndex;
+        return _selectedIndex > -1 && _viewSuggestedItems.IndexOf(item) == _selectedIndex;
     }
 
 

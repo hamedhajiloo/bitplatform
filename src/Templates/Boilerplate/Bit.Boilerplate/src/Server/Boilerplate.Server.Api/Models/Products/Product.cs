@@ -39,7 +39,17 @@ public partial class Product
 
     public bool HasPrimaryImage { get; set; } = false;
 
+    public string? PrimaryImageAltText { get; set; }
+
     //#if (database == "PostgreSQL")
     public Pgvector.Vector? Embedding { get; set; }
+    //#elif (database == "SqlServer")
+    //#if (IsInsideProjectTemplate == true)
+    /*
+    //#endif
+    public Microsoft.Data.SqlTypes.SqlVector<float>? Embedding { get; set; }
+    //#if (IsInsideProjectTemplate == true)
+    */
+    //#endif
     //#endif
 }

@@ -20,9 +20,9 @@
                 <div class="section-card-txt">
                     <BitText Typography="BitTypography.H5" Gutter>Solution files</BitText>
                     The image on the right displays project structure.
-                    You will find two solution files in your project: MyFirstProject.sln and MyFirstProject.Web.slnf.
+                    You will find two solution files in your project: MyFirstProject.slnx and MyFirstProject.Web.slnf.
                     The MyFirstProject.Web.slnf file is designed to enhance your development efficiency by providing faster compilation,
-                    as it only includes the Backend API and the web version of your application. Conversely, the MyFirstProject.sln file encompasses all projects,
+                    as it only includes the Backend API and the web version of your application. Conversely, the MyFirstProject.slnx file encompasses all projects,
                     such as Android and Windows, and may result in slower opening and build times.
                     <br />
                     <br />
@@ -111,6 +111,13 @@
                 <li>
                     <b>Server.Web:</b> This project references Server.Api by default.
                     Running this project will make the features mentioned in Server.Api section available on port 5000 as well as server components for Blazor pre-rendering and Blazor Server.
+                </li>
+                <li>
+                    <b>Server.AppHost:</b> This is the app host for <a href="https://learn.microsoft.com/en-us/dotnet/aspire/" target="_blank">ASP.NET Aspire</a>, which is <b>optional</b> to use.
+                </li>
+                <li>
+                    <b>Server.Shared:</b> The Server.Shared project includes code shared between the Server.Api and Server.Web projects.
+                    Optionally, it may contain code for use within ASP.NET Aspire, similar to the Aspire's `ServiceDefaults` project.
                 </li>
             </ul>
 

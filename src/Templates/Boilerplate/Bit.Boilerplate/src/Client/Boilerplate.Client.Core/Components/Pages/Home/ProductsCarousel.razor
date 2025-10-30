@@ -27,7 +27,7 @@ else
                 <BitCarouselItem Style="width:100%">
                     <BitLink Href="@product.PageUrl" NoUnderline Style="color:unset">
                         <BitStack Horizontal Class="carousel-stack">
-                            <ProductImage Src="@GetProductImageUrl(product)" Width="50%" Class="carousel-image" />
+                            <ProductImage Src="@GetProductImageUrl(product)" Alt="@product.PrimaryImageAltText" Width="50%" Class="carousel-image" />
                             <BitStack AutoHeight>
                                 <br />
                                 <BitText Typography="BitTypography.H3" Color="BitColor.Secondary">
@@ -44,8 +44,16 @@ else
             }
         </BitCarousel>
         <BitStack Horizontal FitSize Class="carousel-buttons">
-            <BitButton Size="BitSize.Small" Color="BitColor.Tertiary" IconName="@BitIconName.ChevronLeft" IconOnly OnClick="() => carouselRef.GoPrev()"></BitButton>
-            <BitButton Size="BitSize.Small" Color="BitColor.Tertiary" IconName="@BitIconName.ChevronRight" IconOnly OnClick="() => carouselRef.GoNext()"></BitButton>
+            <BitButton IconOnly 
+                       Size="BitSize.Small" 
+                       Color="BitColor.Tertiary" 
+                       OnClick="() => carouselRef.GoPrev()" 
+                       IconName="@(CurrentDir is BitDir.Rtl ? BitIconName.ChevronRight : BitIconName.ChevronLeft)" />
+            <BitButton IconOnly 
+                       Size="BitSize.Small" 
+                       Color="BitColor.Tertiary" 
+                       OnClick="() => carouselRef.GoNext()" 
+                       IconName="@(CurrentDir is BitDir.Rtl ? BitIconName.ChevronLeft : BitIconName.ChevronRight)" />
         </BitStack>
     </BitCard>
 }

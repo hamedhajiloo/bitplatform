@@ -17,11 +17,12 @@ using System.Security.Cryptography;
 //#endif
 using Hangfire.EntityFrameworkCore;
 using Boilerplate.Server.Api.Models.Attachments;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 
 namespace Boilerplate.Server.Api.Data;
 
 public partial class AppDbContext(DbContextOptions<AppDbContext> options)
-    : IdentityDbContext<User, Role, Guid, UserClaim, UserRole, UserLogin, RoleClaim, UserToken>(options)
+    : IdentityDbContext<User, Role, Guid, UserClaim, UserRole, UserLogin, RoleClaim, UserToken>(options), IDataProtectionKeyContext
 {
     public DbSet<UserSession> UserSessions { get; set; } = default!;
 
@@ -44,6 +45,8 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
 
     public DbSet<Attachment> Attachments { get; set; } = default!;
 
+    public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -53,7 +56,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         {
             //#endif
             //#if (database == "PostgreSQL")
-            if (EmbeddingIsEnabled)
+            if (IsEmbeddingEnabled)
             {
                 modelBuilder.HasPostgresExtension("vector");
             }
@@ -263,8 +266,14 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         }
     }
 
+    //#if (database == "PostgreSQL" || database == "SqlServer")
     //#if (database == "PostgreSQL")
-    // In order to enable embedding, the `pgvector` extension for must be installed in your PostgreSQL.
-    public static readonly bool EmbeddingIsEnabled = false;
+    // In order to enable embedding, the `pgvector` extension must be installed in your PostgreSQL.
+    // The following command runs the postgreSQL container with the `pgvector` extension:
+    // docker run -d --name postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=BoilerplateDb -p 5432:5432 -v pgdata:/var/lib/postgresql/data --restart unless-stopped pgvector/pgvector:pg17
+    //#elif (database == "SqlServer")
+    // This requires SQL Server 2025+
+    //#endif
+    public static readonly bool IsEmbeddingEnabled = false;
     //#endif
 }
